@@ -52,7 +52,7 @@ from eddy.core.exporters.graphol import GrapholProjectExporter
 from eddy.core.functions.fsystem import fread, fexists, isdir, rmdir
 from eddy.core.functions.misc import rstrip, postfix, rtfStripFontAttributes
 from eddy.core.functions.path import expandPath
-from eddy.core.functions.signals import connect, disconnect
+from eddy.core.functions.signals import connect
 from eddy.core.loaders.common import AbstractDiagramLoader
 from eddy.core.loaders.common import AbstractOntologyLoader
 from eddy.core.loaders.common import AbstractProjectLoader
@@ -67,8 +67,6 @@ from eddy.core.project import K_DESCRIPTION, K_DESCRIPTION_STATUS
 from eddy.core.project import K_FUNCTIONAL, K_INVERSE_FUNCTIONAL
 from eddy.core.project import K_ASYMMETRIC, K_IRREFLEXIVE, K_REFLEXIVE
 from eddy.core.project import K_SYMMETRIC, K_TRANSITIVE
-
-from eddy.core.commands.labels import GenerateNewLabel, CommandLabelChange
 
 
 LOGGER = getLogger()
@@ -182,22 +180,11 @@ class GrapholDiagramLoader_v1(AbstractDiagramLoader):
         :type e: QDomElement
         :rtype: ConceptNode
         """
-
         label = self.getLabelFromElement(e)
         node = self.importGenericNode(Item.ConceptNode, e)
         node.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         node.setText(label.text())
         node.setTextPos(node.mapFromScene(QtCore.QPointF(int(label.attribute('x')), int(label.attribute('y')))))
-
-        if label.text() == 'TOP':
-            new_rc = 'Thing'
-        elif label.text() == 'BOTTOM':
-            new_rc = 'Nothing'
-        else:
-            new_rc = label.text()
-
-        node.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return node
 
     def importDatatypeRestrictionNode(self, e):
@@ -258,19 +245,6 @@ class GrapholDiagramLoader_v1(AbstractDiagramLoader):
         node.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         node.setText(label.text())
         node.setTextPos(node.mapFromScene(QtCore.QPointF(int(label.attribute('x')), int(label.attribute('y')))))
-
-        datatype = node.datatype
-        if datatype is not None:
-            #print('datatype.value', datatype.value)
-            index = datatype.value.index(':')
-            #print('index',index)
-            new_rc = datatype.value[(index+1):len(label.text())]
-            #print('new_rc',new_rc)
-        else:
-            new_rc = label.text()
-
-        node.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return node
 
     def importIntersectionNode(self, e):
@@ -315,16 +289,6 @@ class GrapholDiagramLoader_v1(AbstractDiagramLoader):
         node.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         node.setText(label.text())
         node.setTextPos(node.mapFromScene(QtCore.QPointF(int(label.attribute('x')), int(label.attribute('y')))))
-
-        if label.text() == 'TOP':
-            new_rc = 'TopObjectProperty'
-        elif label.text() == 'BOTTOM':
-            new_rc = 'BottomObjectProperty'
-        else:
-            new_rc = label.text()
-
-        node.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return node
 
     def importRoleChainNode(self, e):
@@ -620,7 +584,7 @@ class GrapholDiagramLoader_v1(AbstractDiagramLoader):
 
         nodes = [n for n in self.nodes.values() if Identity.Neutral in n.identities()]
         if nodes:
-            LOGGER.debug('Loaders >> Graphol >> Running identification algorithm for %s nodes', len(nodes))
+            LOGGER.debug('Running identification algorithm for %s nodes', len(nodes))
             for node in nodes:
                 self.diagram.sgnNodeIdentification.emit(node)
 
@@ -731,17 +695,13 @@ class GrapholProjectLoader_v1(AbstractProjectLoader):
         name = element.attribute('name')
         meta = self.project.meta(item, name)
         meta[K_DESCRIPTION] = rtfStripFontAttributes(element.firstChildElement(K_DESCRIPTION).text())
-
         if element.firstChildElement(K_DESCRIPTION).hasAttribute('status'):
             meta[K_DESCRIPTION_STATUS] = element.firstChildElement(K_DESCRIPTION).attribute('status')
-            #print('meta[K_DESCRIPTION_STATUS]', meta[K_DESCRIPTION_STATUS])
         else:
-            #print('Set Final by default')
             if meta[K_DESCRIPTION] == '':
                 meta[K_DESCRIPTION_STATUS] = ''
             else:
                 meta[K_DESCRIPTION_STATUS] = 'Final'
-
         return meta
 
     def importRoleMetadata(self, element):
@@ -764,65 +724,11 @@ class GrapholProjectLoader_v1(AbstractProjectLoader):
     #   IMPORT PROJECT FROM XML
     #################################
 
-    def convert_string_of_nodes_to_nodes(self):
-
-        LOGGER.debug('GrapholProjectLoader_v1  >>>  convert_string_of_nodes_to_nodes')
-
-        nodes_in_project = self.nproject.nodes()
-
-        IRI_prefixes_nodes_dict_old = self.nproject.IRI_prefixes_nodes_dict
-
-        IRI_prefixes_nodes_dict_new = dict()
-
-        for iri in IRI_prefixes_nodes_dict_old.keys():
-            prefixes = IRI_prefixes_nodes_dict_old[iri][0]
-            nodes = IRI_prefixes_nodes_dict_old[iri][1]
-            properties = IRI_prefixes_nodes_dict_old[iri][2]
-
-            values = []
-            to_prefixes = []
-            to_nodes = set()
-            to_properties = set()
-
-            to_prefixes.extend(prefixes)
-            to_nodes = to_nodes.union(nodes)
-            to_properties = to_properties.union(properties)
-
-            values.append(to_prefixes)
-            values.append(to_nodes)
-            values.append(to_properties)
-
-            IRI_prefixes_nodes_dict_new[iri] = values
-
-        for iri in IRI_prefixes_nodes_dict_new.keys():
-            nodes_str_or_just_node = IRI_prefixes_nodes_dict_new[iri][1]
-            new_nodes_entry = set()
-
-            for node_str_or_just_node in nodes_str_or_just_node:
-                if str(type(node_str_or_just_node)) == '<class \'str\'>':
-                    node_str = node_str_or_just_node
-                    for node in nodes_in_project:
-                        if node_str == str(node):
-                            new_nodes_entry.add(node)
-                else:
-                    node=node_str_or_just_node
-                    new_nodes_entry.add(node)
-
-            for node in new_nodes_entry:
-                if (str(node) not in nodes_str_or_just_node) and (node not in new_nodes_entry):
-                    LOGGER.critical('node is missing'+str(node))
-
-            IRI_prefixes_nodes_dict_new[iri][1] = new_nodes_entry
-
-        self.nproject.IRI_prefixes_nodes_dict = self.nproject.copy_IRI_prefixes_nodes_dictionaries(IRI_prefixes_nodes_dict_new,dict())
-
     def importProjectFromXML(self):
         """
         Initialize the project instance by reading project metadata from XML file.
         :raise ProjectNotValidError: If the project metadata file is missing or not readable.
         """
-        #print('importProjectFromXML >>> ')
-
         QtWidgets.QApplication.processEvents()
 
         LOGGER.info('Loading ontology metadata from %s', self.projectMetaDataPath)
@@ -842,52 +748,15 @@ class GrapholProjectLoader_v1(AbstractProjectLoader):
         iri = ontology.firstChildElement('iri').text()
         LOGGER.debug('Loaded ontology IRI: %s', iri)
         profileName = ontology.firstChildElement('profile').text()
-
-        IRI_prefixes_nodes_dict = ontology.firstChildElement('IRI_prefixes_nodes_dict').text()
-
-        LOGGER.debug('Loaded ontology IRI_prefixes_nodes_dict: %s', IRI_prefixes_nodes_dict)
-
         if not profileName:
             profileName = 'OWL 2'
             LOGGER.warning('Missing ontology profile, using default: %s', profileName)
         profile = self.session.createProfile(profileName)
         LOGGER.debug('Loaded ontology profile: %s', profile.name())
         self.project = Project(
-            name=os.path.basename(path), 
-            path=path,
-            #prefix=prefix, iri=iri,
-            IRI_prefixes_nodes_dict=IRI_prefixes_nodes_dict,
+            name=os.path.basename(path), path=path,
+            prefix=prefix, iri=iri,
             profile=profile, session=self.session)
-
-        saved_iri = iri
-        saved_prefix = prefix
-
-        # print('self.project.iri',self.project.iri)
-        # self.project.print_dictionary(self.project.IRI_prefixes_nodes_dict)
-
-        if (saved_iri is not None) and (saved_iri not in self.project.IRI_prefixes_nodes_dict.keys()):
-
-            # print('(saved_iri is not None) and (saved_iri not in self.project.IRI_prefixes_nodes_dict.keys())')
-
-            prefixes = []
-            if saved_prefix is not None:
-                prefixes.append(saved_prefix)
-            nodes = set()
-            properties = set()
-            properties.add('Project_IRI')
-
-            value = []
-
-            value.append(prefixes)
-            value.append(nodes)
-            value.append(properties)
-
-            self.project.IRI_prefixes_nodes_dict[saved_iri] = value
-
-        # print('self.project.iri',self.project.iri)
-        # self.project.print_dictionary(self.project.IRI_prefixes_nodes_dict)
-
-        #print('importProjectFromXML >>> END')
 
     def importMetaFromXML(self):
         """
@@ -1125,17 +994,13 @@ class GrapholLoaderMixin_v2(object):
         name = e.attribute('name')
         meta = self.nproject.meta(item, name)
         meta[K_DESCRIPTION] = rtfStripFontAttributes(e.firstChildElement(K_DESCRIPTION).text())
-
         if e.firstChildElement(K_DESCRIPTION).hasAttribute('status'):
             meta[K_DESCRIPTION_STATUS] = e.firstChildElement(K_DESCRIPTION).attribute('status')
-            #print('meta[K_DESCRIPTION_STATUS]',meta[K_DESCRIPTION_STATUS])
         else:
-            #print('Set Final by default')
             if meta[K_DESCRIPTION] == '':
                 meta[K_DESCRIPTION_STATUS] = ''
             else:
                 meta[K_DESCRIPTION_STATUS] = 'Final'
-
         return meta
 
     def importRoleMeta(self, e):
@@ -1170,16 +1035,6 @@ class GrapholLoaderMixin_v2(object):
         n.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         n.setText(x.text())
         n.setTextPos(n.mapFromScene(QtCore.QPointF(int(x.attribute('x')), int(x.attribute('y')))))
-
-        if x.text() == 'TOP':
-            new_rc = 'TopDataProperty'
-        elif x.text() == 'BOTTOM':
-            new_rc = 'BottomDataProperty'
-        else:
-            new_rc = x.text()
-
-        n.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return n
 
     def importComplementNode(self, d, e):
@@ -1203,16 +1058,6 @@ class GrapholLoaderMixin_v2(object):
         n.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         n.setText(x.text())
         n.setTextPos(n.mapFromScene(QtCore.QPointF(int(x.attribute('x')), int(x.attribute('y')))))
-
-        if x.text() == 'TOP':
-            new_rc = 'Thing'
-        elif x.text() == 'BOTTOM':
-            new_rc = 'Nothing'
-        else:
-            new_rc = x.text()
-
-        n.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return n
 
     def importDatatypeRestrictionNode(self, d, e):
@@ -1279,19 +1124,6 @@ class GrapholLoaderMixin_v2(object):
         n.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         n.setText(x.text())
         n.setTextPos(n.mapFromScene(QtCore.QPointF(int(x.attribute('x')), int(x.attribute('y')))))
-
-        datatype = n.datatype
-        if datatype is not None:
-            #print('datatype.value', datatype.value)
-            index = datatype.value.index(':')
-            #print('index',index)
-            new_rc = datatype.value[(index+1):len(x.text())]
-            #print('new_rc',new_rc)
-        else:
-            new_rc = x.text()
-
-        n.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return n
 
     def importIntersectionNode(self, d, e):
@@ -1340,16 +1172,6 @@ class GrapholLoaderMixin_v2(object):
         n.setBrush(QtGui.QBrush(QtGui.QColor(e.attribute('color', '#fcfcfc'))))
         n.setText(x.text())
         n.setTextPos(n.mapFromScene(QtCore.QPointF(int(x.attribute('x')), int(x.attribute('y')))))
-
-        if x.text() == 'TOP':
-            new_rc = 'TopObjectProperty'
-        elif x.text() == 'BOTTOM':
-            new_rc = 'BottomObjectProperty'
-        else:
-            new_rc = x.text()
-
-        n.remaining_characters = e.attribute('remaining_characters', new_rc)
-
         return n
 
     def importRoleChainNode(self, d, e):
@@ -1514,153 +1336,6 @@ class GrapholLoaderMixin_v2(object):
         return node
 
     #############################################
-    #   ONTOLOGY IRI dictionary : MAIN IMPORT
-    #################################
-
-    def import_prefixes_nodes_or_properties_of_iri(self, e, inp_type):
-
-        if inp_type == 'prefixes':
-
-            return_set = []
-            inp_var = 'prefix'
-
-        elif inp_type == 'nodes':
-
-            return_set = set()
-            inp_var = 'node'
-
-        elif inp_type == 'properties':
-
-            return_set = set()
-            inp_var = 'property'
-
-        else:
-            pass
-
-        sube = e.firstChildElement(inp_var)
-        while not sube.isNull():
-            try:
-                QtWidgets.QApplication.processEvents()
-
-                var_to_append = sube.attribute(str(inp_var+'_value'))
-
-                #print('inp_type-',inp_type,'-var_to_append-',var_to_append)
-
-            except Exception:
-                LOGGER.exception('Failed to fetch prefixes_nodes_or_properties %s',var_to_append)
-            else:
-
-                if inp_type == 'prefixes':
-                    return_set.append(var_to_append)
-                else:
-                    return_set.add(var_to_append)
-
-            finally:
-                sube = sube.nextSiblingElement(inp_var)
-
-        #print('return_set',return_set)
-
-        return return_set
-
-    def import_IRI_prefixes_nodes_dict(self,e):
-
-        dictionary_to_return = dict()
-
-        sube = e.firstChildElement('iri')
-        while not sube.isNull():
-            try:
-                QtWidgets.QApplication.processEvents()
-
-                iri_to_append = sube.attribute('iri_value')
-
-                #print('iri_to_append',iri_to_append)
-
-                sube_prefixes_to_append = sube.firstChildElement('prefixes')
-                prefixes_to_append = self.import_prefixes_nodes_or_properties_of_iri(sube_prefixes_to_append,'prefixes')
-
-                #print('prefixes_to_append', prefixes_to_append)
-
-                sube_nodes_to_append = sube_prefixes_to_append.nextSiblingElement('nodes')
-                nodes_to_append = self.import_prefixes_nodes_or_properties_of_iri(sube_nodes_to_append,'nodes')
-
-                #print('len(nodes_to_append)', len(nodes_to_append))
-                #print('type(nodes_to_append)', type(nodes_to_append))
-
-                sube_properties_to_append = sube_nodes_to_append.nextSiblingElement('properties')
-                properties_to_append = self.import_prefixes_nodes_or_properties_of_iri(sube_properties_to_append,'properties')
-
-               # print('properties_to_append', properties_to_append)
-
-            except Exception:
-                LOGGER.exception('Failed to fetch iri for %s',iri_to_append)
-            else:
-                value_of_iri_to_append = []
-                value_of_iri_to_append.append(prefixes_to_append)
-                value_of_iri_to_append.append(nodes_to_append)
-                value_of_iri_to_append.append(properties_to_append)
-
-                dictionary_to_return[iri_to_append] = value_of_iri_to_append
-            finally:
-                sube = sube.nextSiblingElement('iri')
-
-        return dictionary_to_return
-
-    #not used
-    def import_prefered_prefix_dict(self,e):
-
-        dictionary_to_return = dict()
-
-        sube = e.firstChildElement('key')
-        while not sube.isNull():
-            try:
-                QtWidgets.QApplication.processEvents()
-
-                key_to_append = sube.attribute('key_value')
-
-                sube_2 = sube.firstChildElement('value')
-                prefered_prefix_to_append = sube_2.attribute('prefix_value')
-
-            except Exception:
-                LOGGER.exception('import_prefered_prefix_dict >>> Failed to fetch key for %s', key_to_append)
-            else:
-                dictionary_to_return[key_to_append] = prefered_prefix_to_append
-            finally:
-                sube = sube.nextSiblingElement('key')
-
-        return dictionary_to_return
-
-    def import_prefered_prefix_list(self,e):
-
-        list_to_return = []
-
-        key_list = []
-        value_list = []
-
-        sube = e.firstChildElement('key')
-
-        while not sube.isNull():
-            try:
-                QtWidgets.QApplication.processEvents()
-
-                key_to_append = sube.attribute('key_value')
-
-                sube_2 = sube.firstChildElement('value')
-                prefered_prefix_to_append = sube_2.attribute('prefix_value')
-
-            except Exception:
-                LOGGER.exception('import_prefered_prefix_dict >>> Failed to fetch key for %s', key_to_append)
-            else:
-                key_list.append(key_to_append)
-                value_list.append(prefered_prefix_to_append)
-            finally:
-                sube = sube.nextSiblingElement('key')
-
-        list_to_return.append(key_list)
-        list_to_return.append(value_list)
-
-        return list_to_return
-
-    #############################################
     #   ONTOLOGY DIAGRAMS : MAIN IMPORT
     #################################
 
@@ -1690,21 +1365,6 @@ class GrapholLoaderMixin_v2(object):
             except Exception:
                 LOGGER.exception('Failed to create node %s', sube.attribute('id'))
             else:
-                if (('AttributeNode' in str(type(node))) or ('ConceptNode' in str(type(node))) or (
-                            'IndividualNode' in str(type(node))) or ('RoleNode' in str(type(node)))):
-
-                    iri_to_set = self.get_iri_of_node_from_string_format_in_dict(node)
-
-                    if iri_to_set is None:
-                        LOGGER.critical('IRI of node not found in Dictionary - ' + str(node))
-                        if self.nproject.iri is not None:
-                            self.nproject.IRI_prefixes_nodes_dict[self.nproject.iri][1].add(node)
-                            new_text = GenerateNewLabel(self.nproject, node).return_label()
-                            node.setText(new_text)
-                    else:
-                        self.nproject.IRI_prefixes_nodes_dict[iri_to_set][1].add(node)
-                        self.nproject.IRI_prefixes_nodes_dict[iri_to_set][1].remove(str(node))
-
                 diagram.addItem(node)
                 diagram.guid.update(node.id)
                 self.buffer[diagram.name][node.id] = node
@@ -1807,150 +1467,12 @@ class GrapholLoaderMixin_v2(object):
         """
         section = self.document.documentElement().firstChildElement('predicates')
         element = section.firstChildElement('predicate')
-
-        all_predicate_nodes_in_project_text = []
-
-        for n in self.nproject.predicates():
-            all_predicate_nodes_in_project_text.append(n.text().replace('\n',''))
-
         while not element.isNull():
             QtWidgets.QApplication.processEvents()
             meta = self.importMeta(element)
             if meta:
-                if meta[1] in all_predicate_nodes_in_project_text:
-                    self.nproject.setMeta(meta[0], meta[1], meta[2])
-                else:
-                    new_meta = str(self.nproject.prefix + ':' + meta[1])
-                    new_meta_2 = str(self.nproject.iri + '#' + meta[1])
-                    new_meta_3 = str(self.nproject.iri + '/' + meta[1])
-                    new_meta_4 = str(':' + meta[1])
-
-                    all_metas = []
-
-                    all_metas.append(new_meta)
-                    all_metas.append(new_meta_2)
-                    all_metas.append(new_meta_3)
-                    all_metas.append(new_meta_4)
-
-                    flag = False
-
-                    for m in all_metas:
-                        if m in all_predicate_nodes_in_project_text:
-                            self.nproject.setMeta(meta[0], m, meta[2])
-                            flag = True
-                            break
-
-                    if flag is False:
-                        LOGGER.critical('Corresponding node not found for'+str(meta))
-
+                self.nproject.setMeta(meta[0], meta[1], meta[2])
             element = element.nextSiblingElement('predicate')
-
-    def remove_invalid_nodes_from_the_dict(self):
-
-        invalid_nodes = []
-
-        for iri in self.nproject.IRI_prefixes_nodes_dict.keys():
-            nodes = self.nproject.IRI_prefixes_nodes_dict[iri][1]
-            new_nodes = set()
-
-            for n in nodes:
-                if (('AttributeNode' in str(type(n))) or ('ConceptNode' in str(type(n))) or (
-                            'IndividualNode' in str(type(n))) or ('RoleNode' in str(type(n)))):
-                    new_nodes.add(n)
-                else:
-                    invalid_nodes.append(n)
-
-            self.nproject.IRI_prefixes_nodes_dict[iri][1] = new_nodes
-
-        if len(invalid_nodes) >0:
-            #print('invalid_nodes present in the dictionary were removed. They are -',invalid_nodes)
-            LOGGER.info('invalid_nodes present in the dictionary were removed')
-
-    def get_iri_of_node_from_string_format_in_dict(self,node_inp):
-
-        for iri in self.nproject.IRI_prefixes_nodes_dict.keys():
-            str_of_nodes = self.nproject.IRI_prefixes_nodes_dict[iri][1]
-            #print('iri',iri)
-            for n in str_of_nodes:
-                #print('     n',n)
-                if (str(node_inp) == n):
-                    return iri
-
-        return None
-
-    def convert_string_of_nodes_to_nodes(self):
-
-        LOGGER.debug('GrapholLoaderMixin_v2 >>> Convert nodes from string format to eddy nodes format in IRI-Prefixes dictionary')
-
-        nodes_in_project = self.nproject.nodes()
-
-        IRI_prefixes_nodes_dict_old = self.nproject.IRI_prefixes_nodes_dict
-
-        #self.nproject.print_dictionary(IRI_prefixes_nodes_dict_old)
-
-        #print('******  IRI_prefixes_nodes_dict_old  END ******')
-
-        IRI_prefixes_nodes_dict_new = dict()
-
-        for iri in IRI_prefixes_nodes_dict_old.keys():
-            prefixes = IRI_prefixes_nodes_dict_old[iri][0]
-            nodes = IRI_prefixes_nodes_dict_old[iri][1]
-            properties = IRI_prefixes_nodes_dict_old[iri][2]
-
-            values = []
-            to_prefixes = []
-            to_nodes = set()
-            to_properties = set()
-
-            #print('iri,to_prefixes,prefixes', iri, to_prefixes, prefixes)
-
-            to_prefixes.extend(prefixes)
-
-            #print('iri,to_prefixes,prefixes', iri, to_prefixes, prefixes)
-
-            to_nodes = to_nodes.union(nodes)
-            to_properties = to_properties.union(properties)
-
-            #print('iri',iri,' - to_prefixes',to_prefixes,' -len(to_nodes)',len(to_nodes), ' - to_properties',to_properties)
-
-            values.append(to_prefixes)
-            values.append(to_nodes)
-            values.append(to_properties)
-
-            IRI_prefixes_nodes_dict_new[iri] = values
-
-        #print('')
-
-        for iri in IRI_prefixes_nodes_dict_new.keys():
-            nodes_str_or_just_node = IRI_prefixes_nodes_dict_new[iri][1]
-            new_nodes_entry = set()
-
-            #print('iri',iri,' -len(nodes_str_or_just_node)',len(nodes_str_or_just_node))
-
-            for node_str_or_just_node in nodes_str_or_just_node:
-
-                #print('     node_str_or_just_node',node_str_or_just_node)
-                #print('     str(type(node_str_or_just_node))',str(type(node_str_or_just_node)))
-
-                if str(type(node_str_or_just_node)) == '<class \'str\'>':
-                    #print('         TE 1')
-                    node_str = node_str_or_just_node
-                    for node in nodes_in_project:
-                        if node_str == str(node):
-                            #print('         T 2')
-                            new_nodes_entry.add(node)
-                            break
-                else:
-                    node = node_str_or_just_node
-                    new_nodes_entry.add(node)
-
-            for node in new_nodes_entry:
-                if (str(node) not in nodes_str_or_just_node) and (node not in new_nodes_entry):
-                    LOGGER.critical('node is missing' + str(node))
-
-            IRI_prefixes_nodes_dict_new[iri][1] = new_nodes_entry
-
-        self.nproject.IRI_prefixes_nodes_dict = self.nproject.copy_IRI_prefixes_nodes_dictionaries(IRI_prefixes_nodes_dict_new, dict())
 
     def createProject(self):
         """
@@ -1967,59 +1489,24 @@ class GrapholLoaderMixin_v2(object):
             """
             QtWidgets.QApplication.processEvents()
             subelement = section.firstChildElement(tag)
-
             if subelement.isNull():
                 LOGGER.warning('Missing tag <%s> in ontology section, using default: %s', tag, default)
                 return default
             content = subelement.text()
-            if (not content) and (tag is not 'IRI_prefixes_nodes_dict') and (tag is not 'prefered_prefix_dict'):
+            if not content:
                 LOGGER.warning('Empty tag <%s> in ontology section, using default: %s', tag, default)
                 return default
             LOGGER.debug('Loaded ontology %s: %s', tag, content)
-
-            if tag is 'IRI_prefixes_nodes_dict':
-                dictionary_to_return = self.import_IRI_prefixes_nodes_dict(subelement)
-                return dictionary_to_return
-
             return content
 
         self.nproject = Project(
             name=parse(tag='name', default=rstrip(os.path.basename(self.path), File.Graphol.extension)),
             path=os.path.dirname(self.path),
-            #prefix=parse(tag='prefix', default=None),
-            #iri=parse(tag='iri', default=None),
+            prefix=parse(tag='prefix'),
+            iri=parse(tag='iri'),
             version=parse(tag='version', default='1.0'),
             profile=self.session.createProfile(parse('profile', 'OWL 2')),
-            IRI_prefixes_nodes_dict = parse('IRI_prefixes_nodes_dict', dict()),
             session=self.session)
-
-        saved_iri = parse(tag='iri', default=None)
-        saved_prefix = parse(tag='prefix', default=None)
-
-        #print('self.nproject.iri',self.nproject.iri)
-        #self.nproject.print_dictionary(self.nproject.IRI_prefixes_nodes_dict)
-
-        if (saved_iri is not None) and (saved_iri not in self.nproject.IRI_prefixes_nodes_dict.keys()) :
-
-            #print('(saved_iri is not None) and (saved_iri not in self.nproject.IRI_prefixes_nodes_dict.keys())')
-
-            prefixes = []
-            if saved_prefix is not None:
-                prefixes.append(saved_prefix)
-            nodes = set()
-            properties = set()
-            properties.add('Project_IRI')
-
-            value = []
-
-            value.append(prefixes)
-            value.append(nodes)
-            value.append(properties)
-
-            self.nproject.IRI_prefixes_nodes_dict[saved_iri] = value
-
-        #print('self.nproject.iri', self.nproject.iri)
-        #self.nproject.print_dictionary(self.nproject.IRI_prefixes_nodes_dict)
 
         LOGGER.info('Loaded ontology: %s...', self.nproject.name)
 
@@ -2070,11 +1557,7 @@ class GrapholOntologyLoader_v2(AbstractOntologyLoader, GrapholLoaderMixin_v2):
         self.createDomDocument()
         self.createProject()
         self.createDiagrams()
-
-        self.remove_invalid_nodes_from_the_dict()
-
         self.createPredicatesMeta()
-
         self.projectRender()
         self.projectMerge()
 
@@ -2132,11 +1615,6 @@ class GrapholProjectLoader_v2(AbstractProjectLoader, GrapholLoaderMixin_v2):
         else:
             self.createProject()
             self.createDiagrams()
-
-            self.remove_invalid_nodes_from_the_dict()
-
             self.createPredicatesMeta()
             self.projectRender()
             self.projectLoaded()
-
-
