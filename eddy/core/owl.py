@@ -35,6 +35,7 @@
 from PyQt5 import QtCore
 from PyQt5 import QtXmlPatterns
 
+from urllib.parse import quote
 from rfc3987 import compose
 from rfc3987 import parse
 from rfc3987 import resolve
@@ -63,6 +64,19 @@ class IRI(QtCore.QObject):
     @staticmethod
     def separator(iri):
         return '' if iri[-1] in {'/', '#', ':'} else '#'
+
+    @staticmethod
+    def quote(string, encoding='utf-8'):
+        """
+        Returns a quoted copy of the given `string`.
+        By default, encoding is performed for non-ASCII using `utf-8`.
+        :type string: str
+        :type encoding: str
+        :rtype: str
+        """
+        if isinstance(string, str):
+            return quote(string, safe="/;%[]=:$&()+,!?*@'~", encoding=encoding)
+        return None
 
     #############################################
     #   PROPERTIES
@@ -175,6 +189,19 @@ class IRI(QtCore.QObject):
         if other.isAbsolute():
             return other
         return IRI(resolve(str(self), str(other)))
+
+    def toURI(self):
+        """
+        Returns an encoded URI corresponding to this `IRI`.
+        :rtype: str
+        """
+        return compose(**{
+            'scheme': IRI.quote(self.scheme),
+            'authority': IRI.quote(self.authority),
+            'path': IRI.quote(self.path),
+            'query': IRI.quote(self.query),
+            'fragment': IRI.quote(self.fragment)
+        })
 
     def __eq__(self, other):
         """

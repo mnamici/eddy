@@ -146,6 +146,22 @@ class IRITestCase(unittest.TestCase):
         self.assertTrue(IRI3.isURI())
         self.assertFalse(IRI4.isURI())
 
+    def test_resolve(self):
+        IRI1 = IRI('http://example.com/')
+        IRI2 = IRI('http://example.com/res')
+        IRI3 = IRI('http://example.com/', 'res')
+        self.assertEqual(IRI2, IRI1.resolve('res'))
+        self.assertEqual(IRI('http://example.com/other-res'), IRI2.resolve('other-res'))
+        self.assertEqual(IRI('http://example.com/other-res'), IRI3.resolve('other-res'))
+
+    def test_to_uri(self):
+        IRI1 = IRI('http://example.com/')
+        IRI2 = IRI('http://www.example.com:8000/~resource?query=xyz#fragment')
+        IRI3 = IRI('http://example.com/ontology', 'Città')
+        self.assertEqual('http://example.com/', IRI1.toURI())
+        self.assertEqual('http://www.example.com:8000/~resource?query=xyz#fragment', IRI2.toURI())
+        self.assertEqual('http://example.com/ontology#Citt%C3%A0', IRI3.toURI())
+
     def test_eq(self):
         IRI1 = IRI('http://example.com/')
         IRI2 = IRI('http://example.com/', 'res')
