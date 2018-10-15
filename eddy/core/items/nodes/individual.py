@@ -66,7 +66,7 @@ class IndividualNode(AbstractResizableNode):
     Identities = {Identity.Individual, Identity.Value}
     Type = Item.IndividualNode
 
-    def __init__(self, width=60, height=60, brush=None, remaining_characters='individual', **kwargs):
+    def __init__(self, width=60, height=60, brush=None, **kwargs):
         """
         Initialize the node.
         :type width: int
@@ -95,14 +95,14 @@ class IndividualNode(AbstractResizableNode):
         self.background = Polygon(createPolygon(w + 8, h + 8))
         self.selection = Polygon(createPolygon(w + 8, h + 8))
         self.polygon = Polygon(createPolygon(w, h), brush, pen)
-
-        self.remaining_characters = remaining_characters
-
-        self.label = NodeLabel(template='individual', pos=self.center, parent=self, editable=True)
+        self.label = NodeLabel(template='individual', pos=self.center, parent=self)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.updateNode()
         self.updateTextPos()
 
+    #############################################
+    #   PROPERTIES
+    #################################
 
     @property
     def datatype(self):
@@ -158,8 +158,7 @@ class IndividualNode(AbstractResizableNode):
             'id': self.id,
             'brush': self.brush(),
             'height': self.height(),
-            'width': self.width(),
-            'remaining_characters': self.remaining_characters,
+            'width': self.width()
         })
         node.setPos(self.pos())
         node.setText(self.text())
@@ -172,9 +171,7 @@ class IndividualNode(AbstractResizableNode):
         :rtype: int
         """
         polygon = self.polygon.geometry()
-
-        #return polygon[self.IndexTR].y() - polygon[self.IndexBR].y()
-        return polygon[self.IndexBR].y() - polygon[self.IndexTR].y()
+        return polygon[self.IndexTR].y() - polygon[self.IndexBR].y()
 
     def identity(self):
         """
@@ -657,9 +654,6 @@ class IndividualNode(AbstractResizableNode):
         Set the label text: will additionally block label editing if a literal is being.
         :type text: str
         """
-        #print('Individial >> def setText >> ')
-        #print('text',text)
-        #print('RE_VALUE.match(text)',RE_VALUE.match(text))
         self.label.setEditable(RE_VALUE.match(text) is None)
         self.label.setText(text)
         self.label.setAlignment(QtCore.Qt.AlignCenter)

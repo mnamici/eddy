@@ -62,7 +62,7 @@ class RoleNode(AbstractResizableNode):
     Identities = {Identity.Role}
     Type = Item.RoleNode
 
-    def __init__(self, width=70, height=50, brush=None, remaining_characters='role', **kwargs):
+    def __init__(self, width=70, height=50, brush=None, **kwargs):
         """
         Initialize the node.
         :type width: int
@@ -89,10 +89,7 @@ class RoleNode(AbstractResizableNode):
         self.background = Polygon(createPolygon(w + 8, h + 8))
         self.selection = Polygon(createPolygon(w + 8, h + 8))
         self.polygon = Polygon(createPolygon(w, h), brush, pen)
-
-        self.remaining_characters = remaining_characters
-
-        self.label = NodeLabel(template='role', pos=self.center, parent=self, editable=True)
+        self.label = NodeLabel(template='role', pos=self.center, parent=self)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.updateNode()
         self.updateTextPos()
@@ -119,8 +116,7 @@ class RoleNode(AbstractResizableNode):
             'id': self.id,
             'brush': self.brush(),
             'height': self.height(),
-            'width': self.width(),
-            'remaining_characters': self.remaining_characters,
+            'width': self.width()
         })
         node.setPos(self.pos())
         node.setText(self.text())
@@ -167,8 +163,8 @@ class RoleNode(AbstractResizableNode):
         :rtype: bool
         """
         try:
-            return self.project.meta(self.type(), self.text())[K_FUNCTIONAL] #and \
-                   #self.project.profile.type() is not OWLProfile.OWL2QL
+            return self.project.meta(self.type(), self.text())[K_FUNCTIONAL] and \
+                   self.project.profile.type() is not OWLProfile.OWL2QL
         except (AttributeError, KeyError):
             return False
 
@@ -178,8 +174,8 @@ class RoleNode(AbstractResizableNode):
         :rtype: bool
         """
         try:
-            return self.project.meta(self.type(), self.text())[K_INVERSE_FUNCTIONAL] #and \
-                   #self.project.profile.type() is not OWLProfile.OWL2QL
+            return self.project.meta(self.type(), self.text())[K_INVERSE_FUNCTIONAL] and \
+                   self.project.profile.type() is not OWLProfile.OWL2QL
         except (AttributeError, KeyError):
             return False
 
@@ -199,8 +195,8 @@ class RoleNode(AbstractResizableNode):
         :rtype: bool
         """
         try:
-            return self.project.meta(self.type(), self.text())[K_REFLEXIVE] #and \
-                   #self.project.profile.type() is not OWLProfile.OWL2RL
+            return self.project.meta(self.type(), self.text())[K_REFLEXIVE] and \
+                   self.project.profile.type() is not OWLProfile.OWL2RL
         except (AttributeError, KeyError):
             return False
 
@@ -220,8 +216,8 @@ class RoleNode(AbstractResizableNode):
         :rtype: bool
         """
         try:
-            return self.project.meta(self.type(), self.text())[K_TRANSITIVE] #and \
-                   #self.project.profile.type() is not OWLProfile.OWL2QL
+            return self.project.meta(self.type(), self.text())[K_TRANSITIVE] and \
+                   self.project.profile.type() is not OWLProfile.OWL2QL
         except (AttributeError, KeyError):
             return False
 

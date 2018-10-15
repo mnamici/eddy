@@ -37,7 +37,6 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 
 from eddy.core.datatypes.graphol import Identity, Item, Special
-from eddy.core.datatypes.owl import OWLProfile
 from eddy.core.items.common import Polygon
 from eddy.core.items.nodes.common.base import AbstractNode
 from eddy.core.items.nodes.common.label import NodeLabel
@@ -53,7 +52,7 @@ class AttributeNode(AbstractNode):
     Identities = {Identity.Attribute}
     Type = Item.AttributeNode
 
-    def __init__(self, width=20, height=20, brush=None, remaining_characters='attribute', **kwargs):
+    def __init__(self, width=20, height=20, brush=None, **kwargs):
         """
         Initialize the node.
         :type width: int
@@ -67,13 +66,8 @@ class AttributeNode(AbstractNode):
         self.background = Polygon(QtCore.QRectF(-14, -14, 28, 28))
         self.selection = Polygon(QtCore.QRectF(-14, -14, 28, 28))
         self.polygon = Polygon(QtCore.QRectF(-10, -10, 20, 20), brush, pen)
-
-        self.remaining_characters = remaining_characters
-
-        self.label = NodeLabel(template='attribute', pos=lambda: self.center() - QtCore.QPointF(0, 22), parent=self, editable=True)
+        self.label = NodeLabel(template='attribute', pos=lambda: self.center() - QtCore.QPointF(0, 22), parent=self)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
-
-
 
     #############################################
     #   INTERFACE
@@ -95,8 +89,7 @@ class AttributeNode(AbstractNode):
             'id': self.id,
             'brush': self.brush(),
             'height': self.height(),
-            'width': self.width(),
-            'remaining_characters': self.remaining_characters,
+            'width': self.width()
         })
         node.setPos(self.pos())
         node.setText(self.text())
@@ -132,10 +125,7 @@ class AttributeNode(AbstractNode):
         :rtype: bool
         """
         try:
-            return self.project.meta(self.type(), self.text())[K_FUNCTIONAL] #\
-                   #and \
-                   #self.project.profile.type() is not OWLProfile.OWL2QL
-
+            return self.project.meta(self.type(), self.text())[K_FUNCTIONAL]
         except (AttributeError, KeyError):
             return False
 

@@ -52,7 +52,7 @@ class ValueDomainNode(AbstractNode):
     Identities = {Identity.ValueDomain}
     Type = Item.ValueDomainNode
 
-    def __init__(self, width=90, height=40, brush=None, remaining_characters='valuedomain', **kwargs):
+    def __init__(self, width=90, height=40, brush=None, **kwargs):
         """
         Initialize the ValueDomain node.
         :type width: int
@@ -65,9 +65,6 @@ class ValueDomainNode(AbstractNode):
         self.background = Polygon(QtCore.QRectF(-49, -24, 98, 48))
         self.selection = Polygon(QtCore.QRectF(-49, -24, 98, 48))
         self.polygon = Polygon(QtCore.QRectF(-45, -20, 90, 40), brush, pen)
-
-        self.remaining_characters = remaining_characters
-
         self.label = NodeLabel(Datatype.string.value, pos=self.center, editable=False, movable=False, parent=self)
         self.updateNode()
         self.updateTextPos()
