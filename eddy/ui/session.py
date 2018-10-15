@@ -61,9 +61,7 @@ from eddy.core.commands.labels import CommandLabelMove
 from eddy.core.commands.nodes import CommandNodeSetBrush
 from eddy.core.commands.nodes import CommandNodeSetDepth
 from eddy.core.commands.nodes import CommandNodeSwitchTo
-from eddy.core.commands.nodes_2 import CommandNodeSetRemainingCharacters
-from eddy.core.commands.nodes_2 import CommandProjetSetIRIPrefixesNodesDict, CommandProjetSetIRIofCutNodes
-from eddy.core.commands.project import CommandProjectSetProfile, CommandProjectDisconnectSpecificSignals, CommandProjectConnectSpecificSignals
+from eddy.core.commands.project import CommandProjectSetProfile
 from eddy.core.common import HasActionSystem
 from eddy.core.common import HasDiagramExportSystem
 from eddy.core.common import HasDiagramLoadSystem
@@ -134,6 +132,7 @@ _MACOS = sys.platform.startswith('darwin')
 _WIN32 = sys.platform.startswith('win32')
 
 LOGGER = getLogger()
+
 
 class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSystem, HasWidgetSystem,
               HasDiagramExportSystem, HasOntologyExportSystem, HasProjectExportSystem,
@@ -544,13 +543,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
             self, objectName='refactor_name',
             triggered=self.doRefactorName))
 
-        """
-        self.addAction(QtWidgets.QAction(
-            QtGui.QIcon(':/icons/24/ic_label_outline_black'), 'Change prefix...',
-            self, objectName='refactor_change_prefix',
-            triggered=self.doRefactorChangeprefix))
-        """
-
         self.addAction(QtWidgets.QAction(
             QtGui.QIcon(':/icons/24/ic_refresh_black'), 'Relocate label',
             self, objectName='relocate_label',
@@ -715,7 +707,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         self.addOntologyExporter(OWLOntologyExporter)
         self.addProjectExporter(GrapholProjectExporter)
 
-
     def initLoaders(self):
         """
         Initialize diagram and project loaders.
@@ -838,26 +829,14 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         menu.addAction(self.action('special_bottom'))
         self.addMenu(menu)
 
-        #menu = QtWidgets.QMenu('Change Prefix', objectName='Change Prefix')
-        #menu.setIcon(QtGui.QIcon(':/icons/24/ic_star_black'))
-        #menu.addAction(self.action('special_top'))
-        #menu.addAction(self.action('special_bottom'))
-        #self.addMenu(menu)
-
         menu = QtWidgets.QMenu('Select color', objectName='refactor_brush')
         menu.setIcon(QtGui.QIcon(':/icons/24/ic_format_color_fill_black'))
         menu.addActions(self.action('refactor_brush').actions())
         self.addMenu(menu)
 
-        #menu = QtWidgets.QMenu('Change prefix', objectName='refactor_change_prefix')
-        #menu.setIcon(QtGui.QIcon(':/icons/24/ic_format_color_fill_black'))
-        #menu.addActions(self.action('refactor_change_prefix').actions())
-        #self.addMenu(menu)
-
         menu = QtWidgets.QMenu('Refactor', objectName='refactor')
         menu.setIcon(QtGui.QIcon(':/icons/24/ic_format_shapes_black'))
         menu.addAction(self.action('refactor_name'))
-        #menu.addMenu(self.menu('refactor_change_prefix'))
         menu.addMenu(self.menu('refactor_brush'))
         self.addMenu(menu)
 
@@ -951,7 +930,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         Load and initialize application plugins.
         """
         skip_list = ['Explanation_explorer','Unsatisfiable_Entity_Explorer','developers_iri','prefix_explorer']
-        #skip_list = ['Explanation_explorer', 'Unsatisfiable_Entity_Explorer', 'prefix_explorer']
         self.addPlugins(self.pmanager.init(skip_list=skip_list))
 
     def initProfiles(self):
@@ -1093,7 +1071,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         self.addWidget(progressBar)
 
     def initReasoners(self):
-
         self.addReasoners(self.rmanager.init())
 
     #############################################
@@ -1242,53 +1219,11 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
                 else:
                     self.undostack.push(first(commands))
 
-    def common_commands_for_cut_delete_purge(self,diagram,items):
-
-        Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict,
-                                                                             dict())
-        Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict,
-                                                                             dict())
-
-        Dup_1B = self.project.copy_list(self.project.iri_of_cut_nodes, [])
-        Dup_2B = self.project.copy_list(self.project.iri_of_cut_nodes, [])
-
-        iris_to_update = []
-        nodes_to_update = []
-
-        for item in items:
-            if (('AttributeNode' in str(type(item))) or ('ConceptNode' in str(type(item))) or (
-                        'IndividualNode' in str(type(item))) or ('RoleNode' in str(type(item)))):
-                iri_of_node = self.project.get_iri_of_node(item)
-
-                iris_to_update.append(iri_of_node)
-                nodes_to_update.append(item)
-
-                Dup_1B.append(item)
-                Dup_1B.append(iri_of_node)
-
-                Duplicate_dict_1[iri_of_node][1].remove(item)
-
-        commands = []
-
-        commands.append(CommandItemsRemove(diagram, items))
-        commands.append(
-            CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1, iris_to_update,
-                                                 nodes_to_update))
-        commands.append(CommandProjetSetIRIofCutNodes(Dup_2B, Dup_1B, self.project))
-
-        self.undostack.beginMacro('>>')
-        for command in commands:
-            if command:
-                self.undostack.push(command)
-        self.undostack.endMacro()
-
     @QtCore.pyqtSlot()
     def doCopy(self):
         """
         Make a copy of selected items.
         """
-        self.project.iri_of_cut_nodes[:] = []
-
         diagram = self.mdi.activeDiagram()
         if diagram:
             diagram.setMode(DiagramMode.Idle)
@@ -1302,8 +1237,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         """
         Cut selected items from the active diagram.
         """
-        self.project.iri_of_cut_nodes[:] = []
-
         diagram = self.mdi.activeDiagram()
         if diagram:
             diagram.setMode(DiagramMode.Idle)
@@ -1314,9 +1247,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
             items = diagram.selectedItems()
             if items:
                 items.extend([x for item in items if item.isNode() for x in item.edges if x not in items])
-
-                self.common_commands_for_cut_delete_purge(diagram, items)
-
 
     @QtCore.pyqtSlot()
     def doDelete(self):
@@ -1329,8 +1259,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
             items = diagram.selectedItems()
             if items:
                 items.extend([x for item in items if item.isNode() for x in item.edges if x not in items])
-
-                self.common_commands_for_cut_delete_purge(diagram, items)
 
 
     #not used
@@ -1552,7 +1480,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         """
         Swap the direction of all the occurrences of the selected role.
         """
-
         def invert(item):
             """
             Invert the type of a node.
@@ -1598,227 +1525,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         Focus the item which is being held by the supplying QAction.
         """
         self.sgnFocusItem.emit(self.sender().data())
-
-    @QtCore.pyqtSlot()
-    def refactorsetprefix(self):
-
-        node = self.sender().data()
-        to_prefix = self.sender().text()
-        if to_prefix == ':':
-            to_iri = None
-            for iri_itr in self.project.IRI_prefixes_nodes_dict.keys():
-                if 'display_in_widget' in self.project.IRI_prefixes_nodes_dict[iri_itr][2]:
-                    to_iri = iri_itr
-                    break
-            if to_iri is None:
-                self.statusBar().showMessage(
-                    ': prefix does not correspond to any IRI in the widget. please contact developer.')
-        else:
-            to_iri = self.project.get_iri_for_prefix(to_prefix)
-        from_prefix = self.project.get_prefix_of_node(node)
-        from_iri = self.project.get_iri_of_node(node)
-
-        #print('from_prefix', from_prefix)
-        #print('to_prefix',to_prefix)
-        #print('from_iri', from_iri)
-        #print('to_iri',to_iri)
-        #print('node',node)
-
-        # case 1
-        if from_prefix == to_prefix:
-            # print('from_prefix == to_prefix')
-            return
-
-        Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict, dict())
-        Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict, dict())
-
-        commands = []
-
-        # case 2
-        if from_iri == to_iri:
-
-            if to_prefix != ':':
-
-                Duplicate_dict_1[from_iri][0].remove(to_prefix)
-                Duplicate_dict_1[from_iri][0].append(to_prefix)
-
-                commands.append(CommandProjectDisconnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-                commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1, [from_iri], None))
-                commands.append(CommandProjectConnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-
-        # case 3
-        else:
-
-            metaDataChanged_ADD_OK_var = set()
-            metaDataChanged_REMOVE_OK_var = set()
-            metaDataChanged_IGNORE_var = set()
-
-            @QtCore.pyqtSlot(str, str, str)
-            def metaDataChanged_REMOVE_OK(iri, node, message):
-                # print('metaDataChanged_REMOVE_OK -', iri, ',', node, ',', message)
-                metaDataChanged_REMOVE_OK_var.add(True)
-
-            @QtCore.pyqtSlot(str, str, str)
-            def metaDataChanged_ADD_OK(iri, node, message):
-                # print('metaDataChanged_ADD_OK -', iri, ',', node, ',', message)
-                metaDataChanged_ADD_OK_var.add(True)
-
-            @QtCore.pyqtSlot(str, str, str)
-            def metaDataChanged_IGNORE(iri, node, message):
-                # if node.id is None:
-                # print('metaDataChanged_IGNORE >', iri, '-', 'None', '-', message)
-                # else:
-                # print('metaDataChanged_IGNORE >', iri, '-', node, '-', message)
-                metaDataChanged_IGNORE_var.add(True)
-
-            connect(self.project.sgnIRINodeEntryAdded, metaDataChanged_ADD_OK)
-            connect(self.project.sgnIRINodeEntryRemoved, metaDataChanged_REMOVE_OK)
-            connect(self.project.sgnIRINodeEntryIgnored, metaDataChanged_IGNORE)
-
-            list_of_nodes_to_process = []
-
-            for n in self.project.nodes():
-                if (('AttributeNode' in str(type(n))) or ('ConceptNode' in str(type(n))) or (
-                            'IndividualNode' in str(type(n))) or ('RoleNode' in str(type(n)))):
-
-                    if (self.project.get_iri_of_node(n) == from_iri) and (n.remaining_characters == node.remaining_characters):
-                        list_of_nodes_to_process.append(n)
-
-            for n in list_of_nodes_to_process:
-
-                self.project.removeIRINodeEntry(Duplicate_dict_1, from_iri, n)
-                self.project.addIRINodeEntry(Duplicate_dict_1, to_iri, n)
-
-                if ((False not in metaDataChanged_REMOVE_OK_var) and (False not in metaDataChanged_ADD_OK_var)) \
-                        and (True not in metaDataChanged_IGNORE_var):
-                    pass
-                else:
-                    LOGGER.warning('redo != undo but transaction was not executed correctly')
-                    self.statusBar().showMessage('transaction was not executed correctly for node' + str(n), 15000)
-                    return
-
-            # part 2
-            if to_prefix != ':':
-                Duplicate_dict_1[to_iri][0].remove(to_prefix)
-                Duplicate_dict_1[to_iri][0].append(to_prefix)
-
-            commands.append(CommandProjectDisconnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-            commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1,
-                                                           [from_iri, to_iri], list_of_nodes_to_process))
-            commands.append(CommandProjectConnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-
-        if any(commands):
-            self.undostack.beginMacro('edit {0} refactorsetprefix'.format(node.name))
-            for command in commands:
-                if command:
-                    self.undostack.push(command)
-            self.undostack.endMacro()
-
-    @QtCore.pyqtSlot()
-    def setprefix(self):
-
-        node = self.sender().data()
-        to_prefix = self.sender().text()
-        if to_prefix == ':':
-            to_iri = None
-            for iri_itr in self.project.IRI_prefixes_nodes_dict.keys():
-                if 'display_in_widget' in self.project.IRI_prefixes_nodes_dict[iri_itr][2]:
-                    to_iri = iri_itr
-                    break
-            if to_iri is None:
-                self.statusBar().showMessage(': prefix does not correspond to any IRI in the widget. please contact developer.')
-        else:
-            to_iri = self.project.get_iri_for_prefix(to_prefix)
-        from_prefix = self.project.get_prefix_of_node(node)
-        from_iri = self.project.get_iri_of_node(node)
-
-        #print('from_prefix', from_prefix)
-        #print('to_prefix',to_prefix)
-        #print('from_iri', from_iri)
-        #print('to_iri',to_iri)
-        #print('node',node)
-
-        #case 1
-        if from_prefix == to_prefix:
-            #print('from_prefix == to_prefix')
-            return
-
-        Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict, dict())
-        Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict, dict())
-
-        commands = []
-
-        #case 2
-        if from_iri == to_iri:
-
-            if to_prefix != ':':
-
-                Duplicate_dict_1[from_iri][0].remove(to_prefix)
-                Duplicate_dict_1[from_iri][0].append(to_prefix)
-
-                commands.append(
-                    CommandProjectDisconnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-                commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1,
-                                                               [from_iri], None))
-                commands.append(CommandProjectConnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-
-        #case 3
-        else:
-
-            metaDataChanged_ADD_OK_var = set()
-            metaDataChanged_REMOVE_OK_var = set()
-            metaDataChanged_IGNORE_var = set()
-
-            @QtCore.pyqtSlot(str, str, str)
-            def metaDataChanged_REMOVE_OK(iri, node, message):
-                #print('metaDataChanged_REMOVE_OK -', iri, ',', node, ',', message)
-                metaDataChanged_REMOVE_OK_var.add(True)
-
-            @QtCore.pyqtSlot(str, str, str)
-            def metaDataChanged_ADD_OK(iri, node, message):
-                #print('metaDataChanged_ADD_OK -', iri, ',', node, ',', message)
-                metaDataChanged_ADD_OK_var.add(True)
-
-            @QtCore.pyqtSlot(str, str, str)
-            def metaDataChanged_IGNORE(iri, node, message):
-                # if node.id is None:
-                # print('metaDataChanged_IGNORE >', iri, '-', 'None', '-', message)
-                # else:
-                #print('metaDataChanged_IGNORE >', iri, '-', node, '-', message)
-                metaDataChanged_IGNORE_var.add(True)
-
-            connect(self.project.sgnIRINodeEntryAdded, metaDataChanged_ADD_OK)
-            connect(self.project.sgnIRINodeEntryRemoved, metaDataChanged_REMOVE_OK)
-            connect(self.project.sgnIRINodeEntryIgnored, metaDataChanged_IGNORE)
-
-            self.project.removeIRINodeEntry(Duplicate_dict_1, from_iri, node)
-            self.project.addIRINodeEntry(Duplicate_dict_1, to_iri, node)
-
-            if ((False not in metaDataChanged_REMOVE_OK_var) and (False not in metaDataChanged_ADD_OK_var)) \
-                    and(True not in metaDataChanged_IGNORE_var):
-                pass
-            else:
-                LOGGER.warning('redo != undo but transaction was not executed correctly')
-                self.statusBar().showMessage('transaction was not executed correctly for node' + str(node),15000)
-                return
-
-            #part 2
-            if to_prefix != ':':
-                Duplicate_dict_1[to_iri][0].remove(to_prefix)
-                Duplicate_dict_1[to_iri][0].append(to_prefix)
-
-            commands.append(
-                CommandProjectDisconnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-            commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1,
-                                                               [from_iri, to_iri], [node]))
-            commands.append(CommandProjectConnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-
-        if any(commands):
-            self.undostack.beginMacro('edit {0} setprefix'.format(node.name))
-            for command in commands:
-                if command:
-                    self.undostack.push(command)
-            self.undostack.endMacro()
 
     @QtCore.pyqtSlot()
     def doNewDiagram(self):
@@ -1972,12 +1678,8 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
                         purge.add(node)
             collection = list(items | purge)
             if collection:
-                collection.extend(
-                    [x for item in collection if item.isNode() for x in item.edges if x not in collection])
-
-                self.common_commands_for_cut_delete_purge(diagram, collection)
-
-                #self.undostack.push(CommandItemsRemove(diagram, collection))
+                collection.extend( [x for item in collection if item.isNode() for x in item.edges if x not in collection])
+                self.undostack.push(CommandItemsRemove(diagram, collection))
 
     @QtCore.pyqtSlot()
     def doQuit(self):
@@ -2193,8 +1895,6 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         Set an invididual node either to Individual or Value.
         Will bring up the Value Form if needed.
         """
-        #print('>>>      Session (doSetIndividualAs)')
-
         diagram = self.mdi.activeDiagram()
         if diagram:
             diagram.setMode(DiagramMode.Idle)
@@ -2205,49 +1905,11 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
                 if action.data() is Identity.Individual:
                     if node.identity() is Identity.Value:
                         data = node.label.template
-
                         name = 'change {0} to {1}'.format(node.text(), data)
-
-                        Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries\
-                            (self.project.IRI_prefixes_nodes_dict,dict())
-                        Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries\
-                            (self.project.IRI_prefixes_nodes_dict,dict())
-
-                        old_iri = self.project.get_iri_of_node(node)
-                        new_iri = self.project.iri
-
-                        if self.project.prefix is None:
-                            new_label = self.project.get_full_IRI(new_iri,None,data)
-                            #new_label = str(new_iri+'#'+data)
-                        else:
-                            new_label = str(self.project.prefix+':'+data)
-
-                        #data = data.replace('\n','')
-
-                        Duplicate_dict_1[old_iri][1].remove(node)
-                        Duplicate_dict_1[new_iri][1].add(node)
-
-                        commands = []
-
-                        commands.append(CommandProjectDisconnectSpecificSignals(self.project))
-                        commands.append(CommandLabelChange(diagram, node, node.text(), new_label))
-                        commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project,Duplicate_dict_2,Duplicate_dict_1, [old_iri, new_iri], [node]))
-                        commands.append(CommandNodeSetRemainingCharacters(node.remaining_characters, data, node, self.project))
-                        commands.append(CommandLabelChange(diagram, node, node.text(), new_label))
-                        commands.append(CommandProjectConnectSpecificSignals(self.project))
-
-                        if any(commands):
-                            self.undostack.beginMacro('edit Forms >> accept() {0}'.format(node))
-                            for command in commands:
-                                if command:
-                                    self.undostack.push(command)
-                            self.undostack.endMacro()
-
+                        self.undostack.push(CommandLabelChange(diagram, node, node.text(), data, name))
                 elif action.data() is Identity.Value:
                     form = ValueForm(node, self)
                     form.exec_()
-
-        #print('>>>      Session (doSetIndividualAs) END')
 
     @QtCore.pyqtSlot()
     def doSetNodeSpecial(self):
@@ -2265,45 +1927,7 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
                 data = special.value
                 if node.text() != data:
                     name = 'change {0} to {1}'.format(node.shortName, data)
-
-                    old_iri = self.project.get_iri_of_node(node)
-                    new_iri = 'http://www.w3.org/2002/07/owl'
-
-                    if node.type() is Item.ConceptNode:
-                        new_rc_lst = ['Nothing','Thing']
-                    if node.type() is Item.RoleNode:
-                        new_rc_lst = ['BottomObjectProperty','TopObjectProperty']
-                    if node.type() is Item.AttributeNode:
-                        new_rc_lst = ['BottomDataProperty','TopDataProperty']
-
-                    if data == 'TOP':
-                        new_rc = new_rc_lst[1]
-                    elif data == 'BOTTOM':
-                        new_rc = new_rc_lst[0]
-
-                    #new_rc = new_rc.replace('\n','')
-
-                    Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries \
-                        (self.project.IRI_prefixes_nodes_dict, dict())
-                    Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries \
-                        (self.project.IRI_prefixes_nodes_dict, dict())
-
-                    Duplicate_dict_1[old_iri][1].remove(node)
-                    Duplicate_dict_1[new_iri][1].add(node)
-
-                    commands = []
-
-                    commands.append(CommandProjectDisconnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-                    commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1, [old_iri, new_iri], [node]))
-                    commands.append(CommandNodeSetRemainingCharacters(node.remaining_characters, new_rc, node, diagram.project))
-                    commands.append(CommandProjectConnectSpecificSignals(self.project, regenerate_label_of_nodes_for_iri=False))
-
-                    if any(commands):
-                        self.undostack.beginMacro('edit {0} doSetNodeSpecial'.format(node))
-                        for command in commands:
-                            if command:
-                                self.undostack.push(command)
-                        self.undostack.endMacro()
+                    self.undostack.push(CommandLabelChange(diagram, node, node.text(), data, name))
 
     @QtCore.pyqtSlot()
     def doSetDatatype(self):
@@ -2682,8 +2306,7 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
             msgbox.setIconPixmap(QtGui.QIcon(':/icons/48/ic_question_outline_black').pixmap(48))
             msgbox.setWindowIcon(QtGui.QIcon(':/icons/128/ic_eddy'))
             msgbox.setWindowTitle('Save changes?')
-            msgbox.setStandardButtons(
-                QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
+            msgbox.setStandardButtons(QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes)
             msgbox.setText('Your project contains unsaved changes. Do you want to save?')
             msgbox.exec_()
             if msgbox.result() == QtWidgets.QMessageBox.Cancel:
