@@ -39,18 +39,13 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from eddy.core.commands.project import CommandProjectDisconnectSpecificSignals, CommandProjectConnectSpecificSignals
-from eddy.core.commands.nodes_2 import CommandProjetSetIRIPrefixesNodesDict
-from eddy.core.commands.nodes_2 import CommandNodeSetRemainingCharacters
-from eddy.core.commands.labels import CommandLabelChange, NewlineFeedInsensitive, Compute_RC_with_spaces
+from eddy.core.commands.labels import CommandLabelChange
 from eddy.core.datatypes.graphol import Item
 from eddy.core.datatypes.misc import DiagramMode
 from eddy.core.datatypes.qt import Font
 from eddy.core.functions.misc import isEmpty
 from eddy.core.functions.signals import connect
 from eddy.core.output import getLogger
-from eddy.core.regex import RE_VALUE
-from eddy.core.datatypes.owl import OWLStandardIRIPrefixPairsDict
 
 
 LOGGER = getLogger()
@@ -141,14 +136,6 @@ class AbstractItem(QtWidgets.QGraphicsItem, DiagramItemMixin):
     #############################################
     #   PROPERTIES
     #################################
-
-    @property
-    def id_with_diag(self):
-
-        if self.diagram is None:
-            return 'None-' + str(self.id)
-        else:
-            return str(self.diagram.name)+'-'+str(self.id)
 
     @property
     def name(self):
@@ -290,8 +277,6 @@ class AbstractLabel(QtWidgets.QGraphicsTextItem, DiagramItemMixin):
         document = self.document()
         connect(document.contentsChange[int, int, int], self.onContentsChanged)
 
-        self.old_text = None
-
     #############################################
     #   EVENTS
     #################################
@@ -322,12 +307,7 @@ class AbstractLabel(QtWidgets.QGraphicsTextItem, DiagramItemMixin):
                 self.setText(self.template)
 
             focusInData = self.focusInData
-            #currentData = self.text()
-            currentData = self.toPlainText()
-
-            #print('self.text()',self.text())
-            #print('self.toHtml()',self.toHtml())
-            #print('self.toPlainText()',self.toPlainText())
+            currentData = self.text()
 
             ###########################################################
             # IMPORTANT!                                              #
@@ -341,103 +321,9 @@ class AbstractLabel(QtWidgets.QGraphicsTextItem, DiagramItemMixin):
             self.setText(focusInData)
 
             if focusInData and focusInData != currentData:
-
-                """
-                reasoner_active = self.project.check_if_reasoner_was_active()
-                if (reasoner_active == 'was_unsatisfiable') or (reasoner_active == 'was_inconsistent'):
-                    reasoner_variables = FetchReasonerVariables(self.project)
-                else:
-                    reasoner_variables = 'empty'
-                """
                 node = self.parentItem()
-                match = RE_VALUE.match(currentData)
-
-                commands = []
-
-                if match:
-                    new_prefix = match.group('datatype')[0:match.group('datatype').index(':')]
-                    new_remaining_characters = match.group('datatype')[match.group('datatype').index(':') + 1:len(match.group('datatype'))]
-
-                    new_iri = None
-
-                    for std_iri in OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict.keys():
-                        std_prefix = OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict[std_iri]
-                        if std_prefix == new_prefix:
-                            new_iri = std_iri
-
-                    Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries(
-                        self.project.IRI_prefixes_nodes_dict, dict())
-                    Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries(
-                        self.project.IRI_prefixes_nodes_dict, dict())
-
-                    old_iri = self.project.get_iri_of_node(node)
-
-                    Duplicate_dict_1[old_iri][1].remove(node)
-                    Duplicate_dict_1[new_iri][1].add(node)
-
-                    self.setText(self.old_text)
-
-                    commands.append(CommandProjectDisconnectSpecificSignals(self.project))
-                    commands.append(CommandLabelChange(self.diagram, node, self.old_text, currentData))
-
-                    #commands.append(CommandNodeSetRemainingCharacters(node.remaining_characters, new_remaining_characters, node, self.project, regenerate_label=False))
-                    commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1, [old_iri, new_iri], [node]))
-                    commands.append(CommandNodeSetRemainingCharacters(node.remaining_characters, new_remaining_characters, node, self.project, regenerate_label=False))
-                    #commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1, [old_iri, new_iri], [node]))
-
-                    commands.append(CommandLabelChange(self.diagram, node, self.old_text, currentData))
-                    commands.append(CommandProjectConnectSpecificSignals(self.project))
-
-                else:
-                    self.setText(self.old_text)
-
-                    exception_list = ['-', '_', '.', '~', '\n']
-                    currentData_processed = ''
-
-                    flag = False
-
-                    for i,c in enumerate(currentData):
-
-                        if c == '':
-                            pass
-                        elif i < (len(currentData) - 1) and (c == '\\' and currentData[i + 1] == 'n'):
-                            currentData_processed = currentData_processed + '\n'
-                        elif i > 0 and (c == 'n' and currentData[i - 1] == '\\'):
-                            pass
-                        elif (not c.isalnum()) and (c not in exception_list):
-                            currentData_processed = currentData_processed + '_'
-                            flag = True
-                        else:
-                            currentData_processed = currentData_processed + c
-
-                    if flag is True:
-                        self.session.statusBar().showMessage('Spaces in between alphanumeric characters and special characters were replaced by an underscore character.', 15000)
-
-                    #print('self.old_text',self.old_text)
-                    #print('currentData', currentData)
-                    #print('currentData_processed',currentData_processed)
-
-                    commands.append(CommandProjectDisconnectSpecificSignals(self.project))
-
-                    commands.append(CommandNodeSetRemainingCharacters(node.remaining_characters, currentData_processed, node, self.project))
-                    """
-                    if NewlineFeedInsensitive(node.remaining_characters,currentData_processed).result() is True:
-                        commands.append(
-                            CommandNodeSetRemainingCharacters(node.remaining_characters, currentData_processed, node, self.project, refactor=True))
-                    else:
-                        commands.append(CommandNodeSetRemainingCharacters(node.remaining_characters, currentData_processed, node, self.project))
-                    """
-                    commands.append(CommandProjectConnectSpecificSignals(self.project))
-
-                if any(commands):
-                    self.session.undostack.beginMacro('edit {0} AbstractLabel >> focusOutEvent'.format(node.name))
-                    for command in commands:
-                        if command:
-                            self.session.undostack.push(command)
-                    self.session.undostack.endMacro()
-            else:
-                self.setText(self.old_text)
-                self.old_text = None
+                command = CommandLabelChange(self.diagram, node, focusInData, currentData)
+                self.session.undostack.push(command)
 
             self.focusInData = None
             self.setSelectedText(False)
@@ -485,13 +371,6 @@ class AbstractLabel(QtWidgets.QGraphicsTextItem, DiagramItemMixin):
         """
         if self.isEditable():
             super().mouseDoubleClickEvent(mouseEvent)
-
-            self.old_text = self.text()
-            prev_rc_without_whitespace = self._parent.remaining_characters
-
-            prev_rc = Compute_RC_with_spaces(prev_rc_without_whitespace, self.old_text).return_result()
-
-            self.setText(prev_rc)
             self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
             self.setFocus()
 
