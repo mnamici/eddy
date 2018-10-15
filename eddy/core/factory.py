@@ -244,13 +244,9 @@ class MenuFactory(QtCore.QObject):
         :rtype: QMenu
         """
         menu = self.buildGenericNodeMenu(diagram, node)
-
         # BUILD CUSTOM ACTIONS FOR PREDICATE OCCURRENCES
         self.customAction['occurrences'] = []
-        #self.customAction['Change Prefix'] = []
-
         for pnode in self.project.predicates(node.type(), node.text()):
-
             action = QtWidgets.QAction(self.session)
             action.setCheckable(True)
             action.setChecked(pnode is node)
@@ -258,7 +254,6 @@ class MenuFactory(QtCore.QObject):
             action.setText('{} ({})'.format(pnode.diagram.name, pnode.id))
             connect(action.triggered, self.session.doLookupOccurrence)
             self.customAction['occurrences'].append(action)
-
         # BUILD CUSTOM MENU FOR PREDICATE OCCURRENCES
         self.customMenu['occurrences'] = QtWidgets.QMenu('Occurrences')
         self.customMenu['occurrences'].setIcon(QtGui.QIcon(':/icons/24/ic_visibility_black'))
@@ -267,65 +262,6 @@ class MenuFactory(QtCore.QObject):
         menu.insertMenu(self.session.action('node_properties'), self.customMenu['occurrences'])
         # ADD DESCRIPTION LINK TO THE MENU OF PREDICATE NODE
         menu.addAction(self.session.action('node_description'))
-
-        OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict.values()
-
-        if node.special() is None:
-            self.customAction['Change Prefix'] = []
-            self.customAction['Refactor Change Prefix'] = []
-
-            for iri in self.project.IRI_prefixes_nodes_dict.keys():
-                prefixes_raw = self.project.IRI_prefixes_nodes_dict[iri][0]
-
-                prefixes = []
-                prefixes.extend(prefixes_raw)
-
-                if 'display_in_widget' in self.project.IRI_prefixes_nodes_dict[iri][2]:
-                    prefixes.append(':')
-                for p in prefixes:
-                    #if p in OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict.values():
-                        #continue
-
-                    pr_node = self.project.get_prefix_of_node(node)
-
-                    action = QtWidgets.QAction(self.session)
-                    action.setCheckable(True)
-                    action.setChecked((pr_node is p) or ((pr_node is '') and (p is ':')))
-                    action.setData(node)
-                    action.setText('{}'.format(p))
-                    connect(action.triggered, self.session.setprefix)
-                    self.customAction['Change Prefix'].append(action)
-
-                    action_2 = QtWidgets.QAction(self.session)
-                    action_2.setCheckable(True)
-                    action_2.setChecked((pr_node is p) or ((pr_node is '') and (p is ':')))
-                    action_2.setData(node)
-                    action_2.setText('{}'.format(p))
-                    connect(action_2.triggered, self.session.refactorsetprefix)
-                    self.customAction['Refactor Change Prefix'].append(action_2)
-
-            ############
-            self.customMenu['Change Prefix'] = QtWidgets.QMenu('Change Prefix')
-            self.customMenu['Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_settings_ethernet_black'))
-            #self.customMenu['Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_visibility_black'))
-
-            for action in (self.customAction['Change Prefix']):
-                self.customMenu['Change Prefix'].addAction(action)
-
-            menu.insertMenu(self.session.action('node_properties'), self.customMenu['Change Prefix'])
-
-            ############
-
-            self.customMenu['Refactor Change Prefix'] = QtWidgets.QMenu('Change Prefix')
-            self.customMenu['Refactor Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_settings_ethernet_black'))
-            #self.customMenu['Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_visibility_black'))
-
-            for action in (self.customAction['Refactor Change Prefix']):
-                self.customMenu['Refactor Change Prefix'].addAction(action)
-
-            self.session.menu('refactor').insertMenu(self.session.action('node_properties'), self.customMenu['Refactor Change Prefix'])
-            ############
-
         return menu
 
     def buildAttributeNodeMenu(self, diagram, node):
@@ -506,98 +442,11 @@ class MenuFactory(QtCore.QObject):
         :rtype: QMenu
         """
         menu = self.buildGenericNodeMenu(diagram, node)
-
-        self.customAction['occurrences'] = []
-
-        for pnode in self.project.predicates(node.type(), node.text()):
-
-            action = QtWidgets.QAction(self.session)
-            action.setCheckable(True)
-            action.setChecked(pnode is node)
-            action.setData(pnode)
-            action.setText('{} ({})'.format(pnode.diagram.name, pnode.id))
-            connect(action.triggered, self.session.doLookupOccurrence)
-            self.customAction['occurrences'].append(action)
-
-        # BUILD CUSTOM MENU FOR PREDICATE OCCURRENCES
-        self.customMenu['occurrences'] = QtWidgets.QMenu('Occurrences')
-        self.customMenu['occurrences'].setIcon(QtGui.QIcon(':/icons/24/ic_visibility_black'))
-        for action in sorted(self.customAction['occurrences'], key=lambda x: x.text()):
-            self.customMenu['occurrences'].addAction(action)
-        menu.insertMenu(self.session.action('node_properties'), self.customMenu['occurrences'])
-
-
-        ############################
-        #change prefix
-        ############################
-
-        OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict.values()
-
-        if node.value is None:
-            self.customAction['Change Prefix'] = []
-            self.customAction['Refactor Change Prefix'] = []
-
-            for iri in self.project.IRI_prefixes_nodes_dict.keys():
-                prefixes_raw = self.project.IRI_prefixes_nodes_dict[iri][0]
-
-                prefixes = []
-                prefixes.extend(prefixes_raw)
-
-                if 'display_in_widget' in self.project.IRI_prefixes_nodes_dict[iri][2]:
-                    prefixes.append(':')
-
-                for p in prefixes:
-                    if p in OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict.values():
-                        continue
-
-                    pr_node = self.project.get_prefix_of_node(node)
-
-                    action = QtWidgets.QAction(self.session)
-                    action.setCheckable(True)
-                    action.setChecked((pr_node is p) or ((pr_node is '') and (p is ':')))
-                    action.setData(node)
-                    action.setText('{}'.format(p))
-                    connect(action.triggered, self.session.setprefix)
-                    self.customAction['Change Prefix'].append(action)
-
-                    action_2 = QtWidgets.QAction(self.session)
-                    action_2.setCheckable(True)
-                    action_2.setChecked((pr_node is p) or ((pr_node is '') and (p is ':')))
-                    action_2.setData(node)
-                    action_2.setText('{}'.format(p))
-                    connect(action_2.triggered, self.session.refactorsetprefix)
-                    self.customAction['Refactor Change Prefix'].append(action_2)
-
-            ############
-            self.customMenu['Change Prefix'] = QtWidgets.QMenu('Change Prefix')
-            self.customMenu['Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_settings_ethernet_black'))
-            # self.customMenu['Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_visibility_black'))
-
-            for action in (self.customAction['Change Prefix']):
-                self.customMenu['Change Prefix'].addAction(action)
-
-            menu.insertMenu(self.session.action('node_properties'), self.customMenu['Change Prefix'])
-
-            ############
-
-            self.customMenu['Refactor Change Prefix'] = QtWidgets.QMenu('Change Prefix')
-            self.customMenu['Refactor Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_settings_ethernet_black'))
-            # self.customMenu['Change Prefix'].setIcon(QtGui.QIcon(':/icons/24/ic_visibility_black'))
-
-            for action in (self.customAction['Refactor Change Prefix']):
-                self.customMenu['Refactor Change Prefix'].addAction(action)
-
-            self.session.menu('refactor').insertMenu(self.session.action('node_properties'),
-                                                     self.customMenu['Refactor Change Prefix'])
-
-
         menu.insertMenu(self.session.action('node_properties'), self.session.menu('refactor'))
         menu.insertMenu(self.session.action('node_properties'), self.session.menu('brush'))
         menu.insertMenu(self.session.action('node_properties'), self.session.menu('switch_individual'))
         self.insertLabelActions(menu, node)
         menu.insertSeparator(self.session.action('node_properties'))
-
-
 
         #############################################
         # BEGIN CONSTRAIN IDENTITY SWITCH
@@ -620,10 +469,8 @@ class MenuFactory(QtCore.QObject):
             value = enumeration.identity() is Identity.ValueDomain or num < 2
 
         assertion = first(node.outgoingNodes(filter_on_edges=f1, filter_on_nodes=f4))
-        #print('assertion',assertion)
         if assertion:
             operand = first(assertion.outgoingNodes(filter_on_edges=f5, filter_on_nodes=f6))
-            #print('operand', operand)
             if operand:
                 if operand.identity() is Identity.Role:
                     value = False
@@ -632,13 +479,11 @@ class MenuFactory(QtCore.QObject):
                     instance = instance and (node.identity() is Identity.Individual or num < 2)
                     value = value and (node.identity() is Identity.Value or num < 2)
 
-                    #print('num,instance,value',num,',',instance,',',value)
-
         for a in self.session.action('switch_individual').actions():
             a.setChecked(a.data() is node.identity())
             a.setVisible(a.data() is Identity.Individual and instance or a.data() is Identity.Value and value)
 
-        #ADD DESCRIPTION LINK TO THE MENU OF INDIVIDUAL NODE
+        # ADD DESCRIPTION LINK TO THE MENU OF INDIVIDUAL NODE
         menu.addAction(self.session.action('node_description'))
 
         #############################################
@@ -1033,7 +878,5 @@ class DescriptionFactory(QtCore.QObject):
         :rtype: QDialog
         """
         description = NodeDescriptionDialog(diagram, node, self.session)
-
         description.setFixedSize(description.sizeHint())
-
         return description
