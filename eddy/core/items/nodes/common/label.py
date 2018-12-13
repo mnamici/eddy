@@ -186,3 +186,73 @@ class FacetQuotedLabel(NodeLabel):
             self.diagram.sgnUpdated.emit()
 
         super(AbstractLabel, self).focusOutEvent(focusEvent)
+
+
+class PredicateLabel(NodeLabel):
+    """
+    This class implements the label of predicate {Concept,Role,Attribute,Individual} nodes.
+    """
+    def __init__(self, **kwargs):
+        """
+        Initialize the label.
+        :type kwargs: dict
+        """
+        super().__init__(**kwargs)
+
+    #############################################
+    #   EVENTS
+    #################################
+
+    def focusInEvent(self, focusEvent):
+        """
+        Executed when the text item is focused.
+        :type focusEvent: QFocusEvent
+        """
+        # FOCUS ONLY ON DOUBLE CLICK
+        if focusEvent.reason() == QtCore.Qt.OtherFocusReason:
+            self.focusInData = self.text()
+            self.diagram.clearSelection()
+            self.diagram.setMode(DiagramMode.LabelEdit)
+            self.setSelectedText(True)
+            super().focusInEvent(focusEvent)
+        else:
+            self.clearFocus()
+
+    def focusOutEvent(self, focusEvent):
+        """
+        Executed when the text item loses the focus.
+        :type focusEvent: QFocusEvent
+        """
+        if self.diagram.mode is DiagramMode.LabelEdit:
+
+            if isEmpty(self.text()):
+                self.setText(self.template)
+
+            focusInData = self.focusInData
+
+            ###########################################################
+            # IMPORTANT!                                              #
+            # ####################################################### #
+            # The code below is a bit tricky: to be able to properly  #
+            # update the node in the project index we need to force   #
+            # the value of the label to it's previous one and let the #
+            # command implementation update the index.                #
+            ###########################################################
+
+            # Validate entered IRI
+            prefixManager = self.project.prefixManager
+            shortForm = prefixManager.getShortForm(self.text())
+            currentData = str(shortForm) if shortForm else self.text()
+
+            if focusInData and focusInData != currentData:
+                command = CommandLabelChange(self.diagram, self.parentItem(), focusInData, currentData)
+                self.session.undostack.push(command)
+
+            self.focusInData = None
+            self.setSelectedText(False)
+            self.setAlignment(self.alignment())
+            self.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
+            self.diagram.setMode(DiagramMode.Idle)
+            self.diagram.sgnUpdated.emit()
+
+        super().focusOutEvent(focusEvent)
