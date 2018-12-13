@@ -39,7 +39,7 @@ from PyQt5 import QtGui
 from eddy.core.datatypes.graphol import Identity, Item, Special
 from eddy.core.items.common import Polygon
 from eddy.core.items.nodes.common.base import AbstractNode
-from eddy.core.items.nodes.common.label import NodeLabel
+from eddy.core.items.nodes.common.label import PredicateLabel
 from eddy.core.project import K_FUNCTIONAL
 
 
@@ -66,7 +66,7 @@ class AttributeNode(AbstractNode):
         self.background = Polygon(QtCore.QRectF(-14, -14, 28, 28))
         self.selection = Polygon(QtCore.QRectF(-14, -14, 28, 28))
         self.polygon = Polygon(QtCore.QRectF(-10, -10, 20, 20), brush, pen)
-        self.label = NodeLabel(template='attribute', pos=lambda: self.center() - QtCore.QPointF(0, 22), parent=self)
+        self.label = PredicateLabel(template='attribute', pos=lambda: self.center() - QtCore.QPointF(0, 22), parent=self)
         self.label.setAlignment(QtCore.Qt.AlignCenter)
 
     #############################################
