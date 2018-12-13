@@ -63,7 +63,7 @@ from eddy.core.functions.signals import connect
 from eddy.core.output import getLogger
 from eddy.core.project import K_DESCRIPTION
 from eddy.core.worker import AbstractWorker
-from eddy.ui.DiagramsSelectionDialog import DiagramsSelectionDialog
+from eddy.ui.dialogs import DiagramsSelectionDialog
 from eddy.ui.fields import ComboBox, CheckBox
 from eddy.ui.progress import BusyProgressDialog
 from eddy.ui.syntax import SyntaxValidationWorker
