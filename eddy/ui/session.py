@@ -108,7 +108,7 @@ from eddy.core.profiles.owl2ql import OWL2QLProfile
 from eddy.core.profiles.owl2rl import OWL2RLProfile
 from eddy.core.reasoner import ReasonerManager
 from eddy.core.update import UpdateCheckWorker
-from eddy.ui.DiagramsSelectionDialog import DiagramsSelectionDialog
+from eddy.ui.dialogs import DiagramsSelectionDialog
 from eddy.ui.about import AboutDialog
 from eddy.ui.fields import ComboBox
 from eddy.ui.forms import CardinalityRestrictionForm
@@ -119,10 +119,10 @@ from eddy.ui.forms import ValueForm
 from eddy.ui.log import LogDialog
 from eddy.ui.mdi import MdiArea
 from eddy.ui.mdi import MdiSubWindow
+from eddy.ui.ontology import OntologyManagerDialog
 from eddy.ui.ontology_consistency_check import OntologyConsistencyCheckDialog
 from eddy.ui.plugin import PluginInstallDialog
 from eddy.ui.preferences import PreferencesDialog
-from eddy.ui.prefix_explorer import OntologyExplorerDialog
 from eddy.ui.progress import BusyProgressDialog
 from eddy.ui.syntax import SyntaxValidationDialog
 from eddy.ui.view import DiagramView
@@ -2100,7 +2100,7 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
         """
         Perform Ontology Consistency checking on the active ontology/diagram.
         """
-        dialog = OntologyExplorerDialog(self.project, self)
+        dialog = OntologyManagerDialog(self)
         dialog.exec_()
 
     @QtCore.pyqtSlot()
