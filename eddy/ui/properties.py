@@ -32,36 +32,29 @@
 #                                                                        #
 ##########################################################################
 
-import sys
+
 from abc import ABCMeta
 
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from eddy.core.commands.project import CommandProjectDisconnectSpecificSignals, CommandProjectConnectSpecificSignals
-from eddy.core.commands.nodes_2 import CommandProjetSetIRIPrefixesNodesDict
-from eddy.core.datatypes.owl import OWLStandardIRIPrefixPairsDict
 from eddy.core.commands.diagram import CommandDiagramResize
-from eddy.core.commands.labels import CommandLabelChange, NewlineFeedInsensitive
+from eddy.core.commands.labels import CommandLabelChange
 from eddy.core.commands.nodes import CommandNodeChangeInputsOrder
-from eddy.core.commands.nodes_2 import CommandNodeSetRemainingCharacters
+from eddy.core.commands.nodes import CommandNodeSetMeta
 from eddy.core.commands.nodes import CommandNodeMove
 from eddy.core.datatypes.collections import DistinctList
-from eddy.core.datatypes.graphol import Item, Identity, Special
+from eddy.core.datatypes.graphol import Item
 from eddy.core.datatypes.owl import Facet, Datatype
 from eddy.core.datatypes.qt import Font
 from eddy.core.diagram import Diagram
 from eddy.core.functions.misc import clamp, isEmpty, first
 from eddy.core.functions.signals import connect
-from eddy.core.output import getLogger
-from eddy.core.items.nodes.common.base import AbstractNode
+from eddy.core.project import K_DESCRIPTION, K_URL
 
 from eddy.ui.fields import IntegerField, StringField, TextField
 from eddy.ui.fields import CheckBox, ComboBox, SpinBox
-
-
-LOGGER = getLogger()
 
 
 class PropertyDialog(QtWidgets.QDialog):
@@ -119,7 +112,7 @@ class DiagramProperty(PropertyDialog):
         self.nodesLabel = QtWidgets.QLabel(self)
         self.nodesLabel.setFont(Font('Roboto', 12))
         self.nodesLabel.setText('N° nodes')
-        self.nodesField = IntegerField (self)
+        self.nodesField = IntegerField(self)
         self.nodesField.setFixedWidth(300)
         self.nodesField.setFont(Font('Roboto', 12))
         self.nodesField.setReadOnly(True)
@@ -360,7 +353,6 @@ class NodeProperty(PropertyDialog):
         self.confirmationBox.setContentsMargins(10, 0, 10, 10)
         self.confirmationBox.setFont(Font('Roboto', 12))
 
-
         #############################################
         # MAIN WIDGET
         #################################
@@ -373,7 +365,7 @@ class NodeProperty(PropertyDialog):
         self.mainLayout.addWidget(self.mainWidget)
         self.mainLayout.addWidget(self.confirmationBox, 0, QtCore.Qt.AlignRight)
 
-        self.setWindowTitle('Properties: {0}'.format(self.node.text().replace('\n', '')))
+        self.setWindowTitle('Properties: {0}'.format(self.node))
         self.setWindowIcon(QtGui.QIcon(':/icons/128/ic_eddy'))
 
         connect(self.confirmationBox.accepted, self.complete)
@@ -434,47 +426,36 @@ class PredicateNodeProperty(NodeProperty):
 
         meta = diagram.project.meta(node.type(), node.text())
 
-        self.iriLabel = QtWidgets.QLabel(self)
-        self.iriLabel.setFont(Font('Roboto', 12))
-        self.iriLabel.setText('IRI')
-        self.iriField = StringField(self)
-        self.iriField.setFixedWidth(300)
-        self.iriField.setFont(Font('Roboto', 12))
+        self.urlLabel = QtWidgets.QLabel(self)
+        self.urlLabel.setFont(Font('Roboto', 12))
+        self.urlLabel.setText('URL')
+        self.urlField = StringField(self)
+        self.urlField.setFixedWidth(300)
+        self.urlField.setFont(Font('Roboto', 12))
+        self.urlField.setValue(meta.get(K_URL, ''))
 
-        self.iriField.setValue(self.diagram.project.get_iri_of_node(node))
+        self.descriptionLabel = QtWidgets.QLabel(self)
+        self.descriptionLabel.setFont(Font('Roboto', 12))
+        self.descriptionLabel.setText('Description')
+        self.descriptionField = TextField(self)
+        self.descriptionField.setFixedSize(300, 160)
+        self.descriptionField.setFont(Font('Roboto', 12))
+        self.descriptionField.setValue(meta.get(K_DESCRIPTION, ''))
 
-        """
-        self.iriversionLabel = QtWidgets.QLabel(self)
-        self.iriversionLabel.setFont(Font('Roboto', 12))
-        self.iriversionLabel.setText('IRI version')
-        self.iriversionField = StringField(self)
-        self.iriversionField.setFixedWidth(300)
-        self.iriversionField.setFont(Font('Roboto', 12))
+        self.generalLayout.addRow(self.urlLabel, self.urlField)
+        self.generalLayout.addRow(self.descriptionLabel, self.descriptionField)
 
-        self.iriversionField.setValue(self.node.IRI_version(diagram.project))
-        """
         #############################################
         # LABEL TAB
         #################################
 
         self.textLabel = QtWidgets.QLabel(self)
         self.textLabel.setFont(Font('Roboto', 12))
-        self.textLabel.setText('IRI Label')
+        self.textLabel.setText('Text')
         self.textField = StringField(self)
         self.textField.setFixedWidth(300)
         self.textField.setFont(Font('Roboto', 12))
-        #if node.type() in {Item.AttributeNode, Item.ConceptNode, Item.RoleNode, Item.IndividualNode}:
-        if (('AttributeNode' in str(type(node))) or ('ConceptNode' in str(type(node))) or (
-                    'IndividualNode' in str(type(node))) or ('RoleNode' in str(type(node)))):
-            self.textField.setValue(self.node.remaining_characters)
-        else:
-            self.textField.setValue(self.node.text().replace('\n',''))
-
-        #if ((node.type() is Item.IndividualNode) and (node.identity() is Identity.Value)) or \
-        if(('IndividualNode' in str(type(node))) and (node.identity() is Identity.Value)) or \
-            (('IndividualNode' not in str(type(node))) and (node.special() is not None)):
-            self.textField.setReadOnly(True)
-            self.iriField.setReadOnly(True)
+        self.textField.setValue(self.node.text())
 
         self.refactorLabel = QtWidgets.QLabel(self)
         self.refactorLabel.setFont(Font('Roboto', 12))
@@ -483,34 +464,17 @@ class PredicateNodeProperty(NodeProperty):
         self.refactorField.setFont(Font('Roboto', 12))
         self.refactorField.setChecked(False)
 
-        #if node.type() in {Item.AttributeNode, Item.ConceptNode, Item.RoleNode}:
-        if (('AttributeNode' in str(type(node))) or ('ConceptNode' in str(type(node))) or ('RoleNode' in str(type(node)))):
+        if node.type() in {Item.AttributeNode, Item.ConceptNode, Item.RoleNode}:
             if node.special() is not None:
                 self.refactorField.setEnabled(False)
 
-        self.FulliriLabel = QtWidgets.QLabel(self)
-        self.FulliriLabel.setFont(Font('Roboto', 12))
-        self.FulliriLabel.setText('Full IRI')
-        self.FulliriField = StringField(self)
-        self.FulliriField.setFixedWidth(300)
-        self.FulliriField.setFont(Font('Roboto', 12))
-        full_iri = self.project.get_full_IRI(self.iriField.value(), None, self.textField.value().strip())
-        self.FulliriField.setValue(full_iri)
-        # self.FulliriField.setValue(self.iriField.value()+'#'+self.textField.value().strip())
-        self.FulliriField.setReadOnly(True)
-
         self.labelWidget = QtWidgets.QWidget()
         self.labelLayout = QtWidgets.QFormLayout(self.labelWidget)
-        self.labelLayout.addRow(self.iriLabel, self.iriField)
         self.labelLayout.addRow(self.textLabel, self.textField)
-        self.labelLayout.addRow(self.FulliriLabel, self.FulliriField)
         self.labelLayout.addRow(self.refactorLabel, self.refactorField)
 
-        self.mainWidget.addTab(self.labelWidget, 'IRI')
+        self.mainWidget.addTab(self.labelWidget, 'Label')
 
-        self.metaDataChanged_ADD_OK_var = None
-        self.metaDataChanged_REMOVE_OK_var = None
-        self.metaDataChanged_IGNORE_var = None
     #############################################
     #   SLOTS
     #################################
@@ -520,23 +484,8 @@ class PredicateNodeProperty(NodeProperty):
         """
         Executed when the dialog is accepted.
         """
-        commands = [self.positionChanged()]
-
-        iri_changed_result = self.IRIChanged()
-
-        if iri_changed_result is not None:
-            if (str(type(iri_changed_result)) is '<class \'str\'>') and ('Error in' in iri_changed_result):
-                super().reject()
-                return
-            else:
-
-                commands.extend(iri_changed_result)
-
-        text_changed_result = self.textChanged()
-        if text_changed_result is not None:
-            commands.extend(text_changed_result)
-
-
+        commands = [self.positionChanged(), self.metaDataChanged()]
+        commands.extend(self.textChanged())
         if any(commands):
             self.session.undostack.beginMacro('edit {0} properties'.format(self.node.name))
             for command in commands:
@@ -548,175 +497,39 @@ class PredicateNodeProperty(NodeProperty):
     #############################################
     #   AUXILIARY METHODS
     #################################
-    def textChanged(self):
 
-        unprocessed_new_text = self.textField.value().strip()
-        unprocessed_new_text = unprocessed_new_text if not isEmpty(unprocessed_new_text) else self.node.label.template
-
-        exception_list = ['-','_','.','~','\n']
-        new_rc = ''
-
-        flag = False
-
-        for i,c in enumerate(unprocessed_new_text):
-            if c == '':
-                pass
-            elif i < (len(unprocessed_new_text) - 1) and (c == '\\' and unprocessed_new_text[i + 1] == 'n'):
-                new_rc = new_rc + '\n'
-            elif i > 0 and (c == 'n' and unprocessed_new_text[i - 1] == '\\'):
-                pass
-            elif (not c.isalnum()) and (c not in exception_list):
-                new_rc = new_rc + '_'
-                flag = True
-            else:
-                new_rc = new_rc + c
-
-        #new_rc = new_rc.replace('\n','')
-
-        if flag is True:
-            self.session.statusBar().showMessage('Spaces in between alphanumeric characters and special characters were replaced by an underscore character.',15000)
-
-        return_list = []
-
-        if (unprocessed_new_text != self.node.remaining_characters):
-
-            #print('unprocessed_new_text',unprocessed_new_text)
-            #print('self.node.remaining_characters',self.node.remaining_characters)
-            #print(NewlineFeedInsensitive(new_rc, self.node.remaining_characters).result())
-
-            return_list.append(CommandProjectDisconnectSpecificSignals(self.project))
-
-            if self.refactorField.isChecked():
-                for n in self.project.nodes():
-                    if n.text() == self.node.text():
-                        return_list.append(
-                            CommandNodeSetRemainingCharacters(n.remaining_characters, new_rc, n, self.project,
-                                                              refactor=True))
-            else:
-                #refactor_var = NewlineFeedInsensitive(new_rc, self.node.remaining_characters).result()
-
-                #return_list.append(
-                #        CommandNodeSetRemainingCharacters(self.node.remaining_characters, new_rc, self.node, self.project, refactor=refactor_var))
-                return_list.append(
-                            CommandNodeSetRemainingCharacters(self.node.remaining_characters, new_rc, self.node, self.project))
-
-            return_list.append(CommandProjectConnectSpecificSignals(self.project))
-
-            return return_list
-
+    def metaDataChanged(self):
+        """
+        Change the url and description of the node.
+        :rtype: QUndoCommand
+        """
+        undo = self.diagram.project.meta(self.node.type(), self.node.text())
+        redo = undo.copy()
+        redo[K_DESCRIPTION] = self.descriptionField.value()
+        redo[K_URL] = self.urlField.value()
+        if redo != undo:
+            return CommandNodeSetMeta(
+                self.diagram.project,
+                self.node.type(),
+                self.node.text(),
+                undo, redo)
         return None
 
-
-    def IRIChanged(self):
-        #Change the iri of the node.
-        #:rtype: Command
-
-        IRI_valid = self.project.check_validity_of_IRI(self.iriField.value())
-
-        if IRI_valid is False:
-            self.session.statusBar().showMessage('Invalid IRI.', 15000)
-            return None
-        else:
-
-            old_iri = self.project.get_iri_of_node(self.node)
-            new_iri = self.iriField.value()
-
-            #if (self.iriField.value() != self.project.get_iri_of_node(node)) or (self.iriversionField.value() != self.node.IRI_version(self.project)):
-            if new_iri != old_iri:
-                connect(self.project.sgnIRINodeEntryAdded, self.metaDataChanged_ADD_OK)
-                connect(self.project.sgnIRINodeEntryRemoved, self.metaDataChanged_REMOVE_OK)
-                connect(self.project.sgnIRINodeEntryIgnored, self.metaDataChanged_IGNORE)
-
-                # check for conflict in prefixes
-                # transaction = remove(old) + add(new)
-                # perform transaction on duplicate dict.
-                # if successful, original_dict = duplicate_dict
-                # else duplicate_dict = original_dict
-
-
-                Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict, dict())
-                Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict, dict())
-
-                list_of_nodes_to_process = []
-
-                if self.refactorField.isChecked():
-                    for n in self.project.nodes():
-                        if (('AttributeNode' in str(type(n))) or ('ConceptNode' in str(type(n))) or (
-                                    'IndividualNode' in str(type(n))) or ('RoleNode' in str(type(n)))):
-
-                            if (self.project.get_iri_of_node(n) == old_iri) and (n.remaining_characters == self.node.remaining_characters):
-                                list_of_nodes_to_process.append(n)
-                else:
-                    list_of_nodes_to_process.append(self.node)
-
-                commands = []
-
-                for nd in list_of_nodes_to_process:
-
-                    self.project.removeIRINodeEntry(Duplicate_dict_1, old_iri, nd)
-                    self.project.addIRINodeEntry(Duplicate_dict_1, new_iri, nd)
-
-                    if (self.metaDataChanged_REMOVE_OK_var is True) and (self.metaDataChanged_ADD_OK_var is True):
-                        self.metaDataChanged_REMOVE_OK_var = False
-                        self.metaDataChanged_ADD_OK_var = False
-                        self.metaDataChanged_IGNORE_var = False
-                    else:
-                        LOGGER.warning('redo != undo but transaction was not executed correctly')
-                        self.metaDataChanged_REMOVE_OK_var = False
-                        self.metaDataChanged_ADD_OK_var = False
-                        self.metaDataChanged_IGNORE_var = False
-                        return str('Error in '+str(nd))
-
-                if len(Duplicate_dict_1[new_iri][0]) == 0:
-                    ###
-                    if 'display_in_widget' in Duplicate_dict_1[new_iri][2]:
-                        new_label = ':'+self.node.remaining_characters
-                    else:
-                        new_label = self.project.get_full_IRI(new_iri, None, self.node.remaining_characters)
-                else:
-                    new_label = str(Duplicate_dict_1[new_iri][0][len(Duplicate_dict_1[new_iri][0]) - 1] + ':' + self.node.remaining_characters)
-
-                commands.append(CommandProjectDisconnectSpecificSignals(self.project))
-
-                for nd in list_of_nodes_to_process:
-                    commands.append(CommandLabelChange(nd.diagram, nd, nd.text(), new_label))
-
-                commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1,
-                                                                     [new_iri, old_iri], list_of_nodes_to_process))
-
-                for nd in list_of_nodes_to_process:
-                    commands.append(CommandLabelChange(nd.diagram, nd, nd.text(), new_label))
-
-                commands.append(CommandProjectConnectSpecificSignals(self.project))
-
-                return commands
-
-            self.metaDataChanged_REMOVE_OK_var = False
-            self.metaDataChanged_ADD_OK_var = False
-            self.metaDataChanged_IGNORE_var = False
-
-            return None
-
-    @QtCore.pyqtSlot(str, str, str)
-    def metaDataChanged_REMOVE_OK(self, iri, node, message):
-
-        #print('metaDataChanged_REMOVE_OK -', iri, ',', node, ',', message)
-        self.metaDataChanged_REMOVE_OK_var = True
-
-    @QtCore.pyqtSlot(str, str, str)
-    def metaDataChanged_ADD_OK(self, iri, node, message):
-
-        #print('metaDataChanged_ADD_OK -', iri, ',', node, ',', message)
-        self.metaDataChanged_ADD_OK_var = True
-
-    @QtCore.pyqtSlot(str, str, str)
-    def metaDataChanged_IGNORE(self, iri, node, message):
-
-        #if node.id is None:
-            #print('metaDataChanged_IGNORE >', iri, '-', 'None', '-', message)
-        #else:
-        #print('metaDataChanged_IGNORE >', iri, '-', node, '-', message)
-        self.metaDataChanged_IGNORE_var = True
+    def textChanged(self):
+        """
+        Change the label of the node.
+        :rtype: list
+        """
+        data = self.textField.value().strip()
+        data = data if not isEmpty(data) else self.node.label.template
+        if self.node.text() != data:
+            if self.refactorField.isChecked():
+                item = self.node.type()
+                name = self.node.text()
+                project = self.diagram.project
+                return [CommandLabelChange(n.diagram, n, n.text(), data) for n in project.predicates(item, name)]
+            return [CommandLabelChange(self.diagram, self.node, self.node.text(), data)]
+        return [None]
 
 
 class OrderedInputNodeProperty(NodeProperty):
@@ -1014,8 +827,6 @@ class ValueNodeProperty(NodeProperty):
         """
         super().__init__(diagram, node, session)
 
-        self.node = node
-
         #############################################
         # VALUE TAB
         #################################
@@ -1062,12 +873,7 @@ class ValueNodeProperty(NodeProperty):
         """
         Executed when the dialog is accepted.
         """
-        commands = [self.positionChanged()]
-        commands_value_changed = self.valueChanged()
-
-        if commands_value_changed is not None:
-            commands.extend(commands_value_changed)
-
+        commands = [self.positionChanged(), self.valueChanged()]
         if any(commands):
             self.session.undostack.beginMacro('edit {0} properties'.format(self.node.name))
             for command in commands:
@@ -1089,33 +895,5 @@ class ValueNodeProperty(NodeProperty):
         value = self.valueField.value()
         data = self.node.compose(value, datatype)
         if self.node.text() != data:
-
-            new_prefix = datatype.value[0:datatype.value.index(':')]
-            new_remaining_characters = datatype.value[datatype.value.index(':') + 1:len(datatype.value)]
-
-            new_iri = None
-
-            for std_iri in OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict.keys():
-                std_prefix = OWLStandardIRIPrefixPairsDict.std_IRI_prefix_dict[std_iri]
-                if std_prefix == new_prefix:
-                    new_iri = std_iri
-
-            Duplicate_dict_1 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict,dict())
-            Duplicate_dict_2 = self.project.copy_IRI_prefixes_nodes_dictionaries(self.project.IRI_prefixes_nodes_dict,dict())
-
-            old_iri = self.project.get_iri_of_node(self.node)
-
-            Duplicate_dict_1[old_iri][1].remove(self.node)
-            Duplicate_dict_1[new_iri][1].add(self.node)
-
-            commands = []
-
-            commands.append(CommandLabelChange(self.diagram, self.node, self.node.text(), data))
-            commands.append(CommandProjetSetIRIPrefixesNodesDict(self.project, Duplicate_dict_2, Duplicate_dict_1, [old_iri, new_iri], [self.node]))
-            commands.append(CommandNodeSetRemainingCharacters(self.node.remaining_characters,\
-                                                              new_remaining_characters,self.node,self.project))
-            commands.append(CommandLabelChange(self.diagram, self.node, self.node.text(), data))
-
-            return commands
-
+            return CommandLabelChange(self.diagram, self.node, self.node.text(), data)
         return None
