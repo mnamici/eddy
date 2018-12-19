@@ -42,6 +42,7 @@ from eddy.core.functions.owl import OWLText
 from eddy.core.functions.path import expandPath
 from eddy.core.functions.signals import connect, disconnect
 from eddy.core.output import getLogger
+from eddy.core.owl import IRI, PrefixManager
 
 from eddy.ui.resolvers import PredicateBooleanConflictResolver
 from eddy.ui.resolvers import PredicateDocumentationConflictResolver
@@ -110,6 +111,7 @@ class Project(QtCore.QObject):
         """
         super().__init__(kwargs.get('session'))
         self.index = ProjectIndex()
+        self.prefixManager = PrefixManager()
         self.iri = kwargs.get('iri', 'NULL')
         self.name = kwargs.get('name')
         self.path = expandPath(kwargs.get('path'))
@@ -117,6 +119,7 @@ class Project(QtCore.QObject):
         self.profile = kwargs.get('profile')
         self.profile.setParent(self)
         self.version = kwargs.get('version', '1.0')
+        self.prefixManager.setPrefix(self.prefix, self.iri)
 
     #############################################
     #   PROPERTIES
