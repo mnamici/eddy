@@ -119,7 +119,8 @@ class Project(QtCore.QObject):
         self.profile = kwargs.get('profile')
         self.profile.setParent(self)
         self.version = kwargs.get('version', '1.0')
-        self.prefixManager.setPrefix(self.prefix, self.iri)
+        #self.prefixManager.setPrefix(self.prefix, self.iri)
+        self.prefixManager.setPrefix('', 'http://datiopen.istat.it/')
 
     #############################################
     #   PROPERTIES

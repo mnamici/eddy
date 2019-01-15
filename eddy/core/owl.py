@@ -32,8 +32,12 @@
 #                                                                        #
 ##########################################################################
 
+"""
+This module contains a collection of classes to deal with common components
+of the OWL 2 language model.
+"""
+
 from PyQt5 import QtCore
-from PyQt5 import QtXmlPatterns
 
 from urllib.parse import quote
 from rfc3987 import compose
@@ -41,130 +45,42 @@ from rfc3987 import parse
 from rfc3987 import resolve
 
 from eddy.core.datatypes.owl import Namespaces
+from eddy.core.functions.xml import getNCNamePrefix, getNCNameSuffix, isNCName, isQName
 
 
 class IRI(QtCore.QObject):
     """
     Represents International Resource Identifiers (https://www.ietf.org/rfc/rfc3987.txt)
     """
-    def __init__(self, namespace, suffix=None, parent=None):
+    def __init__(self, namespace: str, localName: str = None, prefix: str = None, parent=None):
+        """
+        Create a new IRI with the specified namespace and optional localName and prefix
+        :type namespace: str
+        :type localName: str
+        :type prefix: str
+        :type parent: QtCore.QObject
+        """
         super().__init__(parent)
+        
         if not IRI.isValidNamespace(namespace):
             raise IllegalNamespaceError(namespace)
-        self.namespace = str(namespace)
-        self.suffix = suffix
-        self.components = parse(IRI.concat(self.namespace, self.suffix))
+        
+        self.namespace = namespace
+        self.localName = localName
+        self.prefix = prefix
+        self.components = parse(IRI.concat(self.namespace, self.localName))
 
     @staticmethod
-    def concat(namespace, suffix):
-        if suffix:
-            return namespace + IRI.separator(namespace) + suffix
+    def concat(namespace: str, localName: str) -> str:
+        if len(namespace) == 0:
+            return localName
+        if localName:
+            return namespace + IRI.separator(namespace) + localName
         return namespace
 
     @staticmethod
-    def separator(iri):
+    def separator(iri: str) -> str:
         return '' if iri[-1] in {'/', '#', ':'} else '#'
-
-    @staticmethod
-    def quote(string, encoding='utf-8'):
-        """
-        Returns a quoted copy of the given `string`.
-        By default, encoding is performed for non-ASCII using `utf-8`.
-        :type string: str
-        :type encoding: str
-        :rtype: str
-        """
-        if isinstance(string, str):
-            return quote(string, safe="/;%[]=:$&()+,!?*@'~", encoding=encoding)
-        return None
-
-    #############################################
-    #   PROPERTIES
-    #################################
-
-    @property
-    def authority(self):
-        """
-        Returns the authority component of this `IRI`, i.e. the domain name and port number
-        :rtype: str
-        """
-        return self.components.get('authority')
-
-    @property
-    def fragment(self):
-        """
-        Returns the fragment component of this `IRI`, i.e. anything after query parameters or path component
-        :rtype: str
-        """
-        return self.components.get('fragment')
-
-    @property
-    def path(self):
-        """
-        Returns the path component of this `IRI`, i.e. anything between authority and query components
-        :rtype: str
-        """
-        return self.components.get('path')
-
-    @property
-    def query(self):
-        """
-        Returns the query component of this `IRI`, i.e. anything between path and fragment components
-        :rtype: str
-        """
-        return self.components.get('query')
-
-    @property
-    def scheme(self):
-        """
-        Returns the scheme component of this `IRI`, i.e. anything preceding the :// part of the `IRI`
-        :rtype: str
-        """
-        return self.components.get('scheme')
-
-    #############################################
-    #   INTERFACE
-    #################################
-
-    def isAbsolute(self):
-        """
-        Returns `True` if this object represents an absolute IRI, and `False` otherwise
-        :rtype: bool
-        """
-        try:
-            return parse(str(self), rule='absolute_IRI') is not None
-        except ValueError:
-            return False
-
-    def isRelative(self):
-        """
-        Returns `True if this object represents a relative IRI, and `False` otherwise
-        :rtype: bool
-        """
-        try:
-            return parse(str(self), rule='relative_ref') is not None
-        except ValueError:
-            return False
-
-    def isURI(self):
-        """
-        Returns `True` if this object represents a valid URI, and `False` otherwise
-        :return:
-        """
-        try:
-            return parse(str(self), rule='URI_reference') is not None
-        except ValueError:
-            return False
-
-    def isValid(self):
-        """
-        Returns `True` if this object represents a valid IRI, and `False` otherwise
-        :rtype: bool
-        """
-        try:
-            return parse(str(self), rule='IRI') is not None
-        except ValueError:
-            return False
 
     @staticmethod
     def isValidNamespace(namespace):
@@ -174,7 +90,130 @@ class IRI(QtCore.QObject):
         :rtype: bool
         """
         try:
-            return parse(namespace, rule='IRI_reference') is not None
+            return namespace == ':' or parse(namespace, rule='IRI_reference') is not None
+        except ValueError:
+            return False
+
+    @staticmethod
+    def quote(iri: str, encoding='utf-8') -> str:
+        """
+        Returns a quoted copy of the given IRI string.
+        By default, encoding is performed for non-ASCII using `utf-8`.
+        :type iri: str
+        :type encoding: str
+        :rtype: str
+        """
+        if isinstance(iri, str):
+            return quote(iri, safe="/;%[]=:$&()+,!?*@'~", encoding=encoding)
+        return None
+
+    #############################################
+    #   PROPERTIES
+    #################################
+
+    @property
+    def authority(self) -> str:
+        """
+        Returns the authority component of this `IRI`, i.e. the domain name and port number
+        :rtype: str
+        """
+        return self.components.get('authority')
+
+    @property
+    def fragment(self) -> str:
+        """
+        Returns the fragment component of this `IRI`, i.e. anything after query parameters or path component
+        :rtype: str
+        """
+        return self.components.get('fragment')
+
+    @property
+    def path(self) -> str:
+        """
+        Returns the path component of this `IRI`, i.e. anything between authority and query components
+        :rtype: str
+        """
+        return self.components.get('path')
+
+    @property
+    def query(self) -> str:
+        """
+        Returns the query component of this `IRI`, i.e. anything between path and fragment components
+        :rtype: str
+        """
+        return self.components.get('query')
+
+    @property
+    def scheme(self) -> str:
+        """
+        Returns the scheme component of this `IRI`, i.e. anything preceding the :// part of the `IRI`
+        :rtype: str
+        """
+        return self.components.get('scheme')
+
+    @property
+    def abbreviatedIRI(self) -> str:
+        """
+        Returns the abbreviated version of self if it exists, and None otherwise
+
+        :rtype: str
+        """
+        if self.prefix is not None:
+            return '%s:%s'.format(self.prefix, self.localName)
+        return None
+
+    #############################################
+    #   INTERFACE
+    #################################
+
+    def isAbbreviated(self) -> bool:
+        """
+        Returns True if this objects represents an abbreviated IRI, and False otherwise.
+        An abbreviated IRI is composed by a prefix name, followed by a colon (:), followed by a local name.
+
+        :rtype: bool
+        """
+        if self.prefix is not None:
+            return isQName(self.abbreviatedIRI)
+        return False
+
+    def isAbsolute(self) -> bool:
+        """
+        Returns `True` if this object represents an absolute IRI, and `False` otherwise
+        :rtype: bool
+        """
+        try:
+            return parse(str(self), rule='absolute_IRI') is not None
+        except ValueError:
+            return False
+
+    def isRelative(self) -> bool:
+        """
+        Returns `True if this object represents a relative IRI, and `False` otherwise
+        :rtype: bool
+        """
+        try:
+            return parse(str(self), rule='relative_ref') is not None
+        except ValueError:
+            return False
+
+    def isURI(self) -> bool:
+        """
+        Returns `True` if this object represents a valid URI, and `False` otherwise
+        :return:
+        """
+        try:
+            return parse(str(self), rule='URI_reference') is not None
+        except ValueError:
+            return False
+
+    def isValid(self) -> bool:
+        """
+        Returns `True` if this object represents a valid IRI, and `False` otherwise
+        :rtype: bool
+        """
+        try:
+            return parse(str(self), rule='IRI') is not None
         except ValueError:
             return False
 
@@ -226,7 +265,7 @@ class IRI(QtCore.QObject):
         return len(str(self))
 
     def __str__(self):
-        return compose(**self.components)
+        return '<{}>'.format(compose(**self.components))
 
     def __repr__(self):
         return str(self)
@@ -262,22 +301,6 @@ class PrefixManager(QtCore.QObject):
         """
         return self.prefix2namespaceMap.get('')
 
-    def getIRI(self, prefixIRI):
-        """
-        Returns the IRI corresponding to the given short form in `prefixIRI`, or None if no such
-        IRI can be computed (i.e. the prefix value for `prefixIRI` is not managed by this `PrefixManager`).
-        :type prefixIRI: str
-        :rtype: IRI
-        """
-        if prefixIRI.find(':') != -1:
-            idx = prefixIRI.find(':')
-            prefix = prefixIRI[:idx]
-            suffix = prefixIRI[idx + 1:]
-            namespace = self.getPrefix(prefix)
-            if namespace:
-                return IRI(str(namespace), suffix, parent=self)
-        return None
-
     def getPrefix(self, prefix, fallback=None):
         """
         Returns the namespace for `prefix`, or `fallback` if it `prefix` has not been associated with any namespace.
@@ -300,6 +323,26 @@ class PrefixManager(QtCore.QObject):
                 return prefix
         return None
 
+    #####################################
+    # FIXME: move to factory
+    #####################################
+
+    def getIRI(self, prefixIRI):
+        """
+        Returns the IRI corresponding to the given short form in `prefixIRI`, or None if no such
+        IRI can be computed (i.e. the prefix value for `prefixIRI` is not managed by this `PrefixManager`).
+        :type prefixIRI: str
+        :rtype: IRI
+        """
+        if prefixIRI.find(':') != -1:
+            idx = prefixIRI.find(':')
+            prefix = prefixIRI[:idx]
+            suffix = prefixIRI[idx + 1:]
+            namespace = self.getPrefix(prefix)
+            if namespace:
+                return IRI(str(namespace), suffix, parent=self)
+        return None
+
     def getShortForm(self, iri):
         """
         Returns the short form for `iri`, or None if `iri` doesn't match any of the namespaces
@@ -307,10 +350,14 @@ class PrefixManager(QtCore.QObject):
         :type iri: IRI
         :rtype: str
         """
+        if not iri:
+            return None
+        if isQName(iri) or iri.startswith(':'):
+            return iri
         if not isinstance(iri, IRI):
             iri = IRI(iri)
         prefix = self.getPrefixName(iri.namespace)
-        suffix = iri.suffix if iri.suffix else ''
+        suffix = iri.localName if iri.localName else ''
         if prefix is None:
             nsLength = 0
             for p, ns in self.prefix2namespaceMap.items():
@@ -360,7 +407,7 @@ class PrefixManager(QtCore.QObject):
         """
         if not isinstance(namespace, str):
             namespace = str(namespace)
-        if prefix and not QtXmlPatterns.QXmlName.isNCName(prefix):
+        if prefix and not isNCName(prefix):
             raise IllegalPrefixError('{0} for namespace: {1}'.format(prefix, namespace))
         if not IRI.isValidNamespace(namespace):
             raise IllegalNamespaceError(namespace)
@@ -422,6 +469,56 @@ class PrefixManager(QtCore.QObject):
 
     def __repr__(self):
         return str(self)
+
+
+class OWLFactory(QtCore.QObject):
+    """
+    Factory class used to create common objects for dealing with the OWL 2 language.
+    """
+    def __init__(self, project):
+        """
+        Initialize a new factory instance.
+        :type project: Project
+        """
+        super().__init__(project)
+
+    #############################################
+    #   PROPERTIES
+    #################################
+
+    @property
+    def project(self):
+        """
+        Returns the project to which this factory is associated (alias for self.parent()).
+        :rtype: Project
+        """
+        return self.parent()
+
+    #############################################
+    #   INTERFACE
+    #################################
+
+    def createIRI(self, namespace: str, localName: str = None, prefix: str = None):
+        return IRI(namespace, localName, prefix, parent=self.project)
+
+    def createIRIForLabel(self, label: str):
+        import re
+        RE_FULL_IRI = re.compile(r'^<([^\s]+)>$')
+        match = RE_FULL_IRI.match(label.replace('\n', ''))
+        if match: # a full IRI enclosed in < >
+            enclosedIRI = match.group(1)
+            shortForm = self.project.prefixManager.getShortForm(enclosedIRI)
+            if shortForm:
+                pass # TODO: Finish implementing label -> IRI translation
+        return IRI(label.replace('\n', ''), parent=self.project)
+
+    def createPrefixManager(self, **kwargs):
+        """
+        Builds and returns a new prefix manager
+        :param kwargs:
+        :return:
+        """
+        return PrefixManager(parent=self.project)
 
 
 class IllegalPrefixError(RuntimeError):

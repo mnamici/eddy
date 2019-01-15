@@ -241,8 +241,13 @@ class PredicateLabel(NodeLabel):
 
             # Validate entered IRI
             prefixManager = self.project.prefixManager
-            shortForm = prefixManager.getShortForm(self.text())
-            currentData = str(shortForm) if shortForm else self.text()
+            text = self.text()
+            repairedIRI = text.replace('\n', '')
+            shortForm = prefixManager.getShortForm(repairedIRI)
+            if shortForm != repairedIRI:
+                currentData = shortForm
+            else:
+                currentData = self.text()
 
             if focusInData and focusInData != currentData:
                 command = CommandLabelChange(self.diagram, self.parentItem(), focusInData, currentData)
