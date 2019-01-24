@@ -84,7 +84,7 @@ from eddy.core.datatypes.misc import Color, DiagramMode
 from eddy.core.datatypes.owl import Datatype, Facet, OWLProfile
 from eddy.core.datatypes.qt import BrushIcon, Font
 from eddy.core.datatypes.system import Channel, File
-from eddy.core.diagram import Diagram
+from eddy.core.diagram import Diagram, GrapholDiagram
 from eddy.core.exporters.graphml import GraphMLDiagramExporter
 from eddy.core.exporters.graphol import GrapholProjectExporter
 from eddy.core.exporters.graphreferences import GraphReferences
@@ -1830,7 +1830,7 @@ class Session(HasReasoningSystem, HasActionSystem, HasMenuSystem, HasPluginSyste
             settings = QtCore.QSettings(ORGANIZATION, APPNAME)
             size = settings.value('diagram/size', 5000, int)
             name = form.nameField.value()
-            diagram = Diagram.create(name, size, self.project)
+            diagram = GrapholDiagram.create(name, size, self.project)
             connect(diagram.sgnItemAdded, self.project.doAddItem)
             connect(diagram.sgnItemRemoved, self.project.doRemoveItem)
             connect(diagram.selectionChanged, self.doUpdateState)

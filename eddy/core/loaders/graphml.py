@@ -42,7 +42,7 @@ from PyQt5 import QtXml
 
 from eddy.core.datatypes.graphol import Item, Identity, Restriction
 from eddy.core.datatypes.system import File
-from eddy.core.diagram import Diagram
+from eddy.core.diagram import Diagram, GrapholDiagram
 from eddy.core.diagram import DiagramNotFoundError
 from eddy.core.diagram import DiagramNotValidError
 from eddy.core.diagram import DiagramParseError
@@ -681,7 +681,7 @@ class GraphMLOntologyLoader(AbstractOntologyLoader):
         LOGGER.debug('Initializing empty diagram with size: %s', Diagram.MaxSize)
         name = os.path.basename(self.path)
         name = rstrip(name, File.GraphML.extension)
-        self.diagram = Diagram.create(name, Diagram.MaxSize, self.nproject)
+        self.diagram = GrapholDiagram.create(name, Diagram.MaxSize, self.nproject)
 
         root = self.document.documentElement()
         graph = root.firstChildElement('graph')

@@ -45,7 +45,7 @@ from eddy import APPNAME
 from eddy.core.datatypes.collections import DistinctList
 from eddy.core.datatypes.graphol import Item, Identity
 from eddy.core.datatypes.system import File
-from eddy.core.diagram import Diagram
+from eddy.core.diagram import Diagram, GrapholDiagram
 from eddy.core.diagram import DiagramNotFoundError
 from eddy.core.diagram import DiagramNotValidError
 from eddy.core.exporters.graphol import GrapholProjectExporter
@@ -567,7 +567,7 @@ class GrapholDiagramLoader_v1(AbstractDiagramLoader):
 
         name = os.path.basename(self.path)
         name = rstrip(name, File.Graphol.extension)
-        self.diagram = Diagram.create(name, size, self.project)
+        self.diagram = GrapholDiagram.create(name, size, self.project)
 
         #############################################
         # LOAD NODES
@@ -1677,7 +1677,7 @@ class GrapholLoaderMixin_v2(object):
         size = max(int(e.attribute('width', '10000')), int(e.attribute('height', '10000')))
         ## CREATE NEW DIAGRAM
         LOGGER.info('Loading diagram: %s', name)
-        diagram = Diagram.create(name, size, self.nproject)
+        diagram = GrapholDiagram.create(name, size, self.nproject)
         self.buffer[diagram.name] = dict()
         ## LOAD DIAGRAM NODES
         sube = e.firstChildElement('node')
