@@ -1,0 +1,35 @@
+name: tests
+
+on: [push, pull_request]
+
+jobs:
+  run-tests:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7]
+        pyqt-version: [513, 514, 515]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          # Install openjdk 11 from ubuntu repos
+          sudo apt-get install openjdk-11-jdk
+          # Install python dependencies
+          python -m pip install -U pip setuptools wheel
+          python -m pip install -U -r requirements/tox.in
+
+      - name: Run unit tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          tox -e py-pyqt${{ matrix.pyqt-version }}
