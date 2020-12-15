@@ -152,7 +152,6 @@ def test_action_copy_and_paste_single_predicate_node_with_hanging_edges_on_the_s
     iri = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node = first(project.iriOccurrences(Item.RoleIRINode, iri, diagram))
 
-
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -187,7 +186,7 @@ def test_action_copy_and_paste_multiple_predicate_nodes_on_the_same_diagram(sess
     diagram = session.mdi.activeDiagram()
     action_copy = session.action('copy')
     action_paste = session.action('paste')
-    
+
     iri1 = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node1 = first(project.iriOccurrences(Item.RoleIRINode, iri1, diagram))
 
@@ -200,7 +199,6 @@ def test_action_copy_and_paste_multiple_predicate_nodes_on_the_same_diagram(sess
     iri4 = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasMother')
     node4 = first(project.iriOccurrences(Item.RoleIRINode, iri4, diagram))
 
-    
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -328,10 +326,10 @@ def test_action_cut_and_paste_single_predicate_node_on_the_same_diagram(session)
     diagram = session.mdi.activeDiagram()
     action_cut = session.action('cut')
     action_paste = session.action('paste')
-    
+
     iri = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node = first(project.iriOccurrences(Item.RoleIRINode, iri, diagram))
-    
+
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -364,10 +362,10 @@ def test_action_cut_and_paste_single_predicate_node_with_hanging_edges_on_the_sa
     diagram = session.mdi.activeDiagram()
     action_cut = session.action('cut')
     action_paste = session.action('paste')
-    
+
     iri = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node = first(project.iriOccurrences(Item.RoleIRINode, iri, diagram))
-    
+
     num_nodes_in_diagram = len(diagram.nodes())
     num_edges_in_diagram = len(diagram.edges())
     num_items_in_project = len(project.items())
@@ -402,7 +400,7 @@ def test_action_cut_and_paste_multiple_predicate_nodes_on_the_same_diagram(sessi
     diagram = session.mdi.activeDiagram()
     action_cut = session.action('cut')
     action_paste = session.action('paste')
-    
+
     iri1 = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node1 = first(project.iriOccurrences(Item.RoleIRINode, iri1, diagram))
 
@@ -414,7 +412,7 @@ def test_action_cut_and_paste_multiple_predicate_nodes_on_the_same_diagram(sessi
 
     iri4 = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasMother')
     node4 = first(project.iriOccurrences(Item.RoleIRINode, iri4, diagram))
-    
+
     num_nodes_in_diagram = len(diagram.nodes())
     num_edges_in_diagram = len(diagram.edges())
     num_items_in_project = len(project.items())
@@ -468,7 +466,7 @@ def test_action_cut_and_paste_multiple_predicate_nodes_with_shared_edges_on_the_
 
     iri4 = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasMother')
     node4 = first(project.iriOccurrences(Item.RoleIRINode, iri4, diagram))
-    
+
     num_nodes_in_diagram = len(diagram.nodes())
     num_edges_in_diagram = len(diagram.edges())
     num_items_in_project = len(project.items())
@@ -513,10 +511,10 @@ def test_action_delete_single_predicate_node(session):
     project = session.project
     diagram = session.mdi.activeDiagram()
     action = session.action('delete')
-    
+
     iri = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node = first(project.iriOccurrences(Item.RoleIRINode, iri, diagram))
-    
+
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -557,7 +555,7 @@ def test_action_delete_multiple_predicate_nodes_with_shared_edges(session):
 
     iri4 = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasMother')
     node4 = first(project.iriOccurrences(Item.RoleIRINode, iri4, diagram))
-    
+
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -594,10 +592,10 @@ def test_action_delete_multiple_edges(session):
     project = session.project
     diagram = session.mdi.activeDiagram()
     action = session.action('delete')
-    
+
     iri = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasParent')
     node = first(project.iriOccurrences(Item.RoleIRINode, iri, diagram))
-    
+
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -625,10 +623,10 @@ def test_action_purge_role_node(session):
     project = session.project
     diagram = session.mdi.activeDiagram()
     action = session.action('purge')
-    
+
     iri = project.getIRI('http://www.dis.uniroma1.it/~graphol/test_project/hasAncestor')
     node = first(project.iriOccurrences(Item.RoleIRINode, iri, diagram))
-    
+
     num_items_in_project = len(project.items())
     num_nodes_in_project = len(project.nodes())
     num_edges_in_project = len(project.edges())
@@ -689,7 +687,10 @@ def test_action_open_properties_dialog(session, qtbot: QtBot):
                 pytest.fail('Timeout exceeded waiting for dialog to activate')
             qtbot.wait(250)
             attempts += 1
-        QtWidgets.QApplication.activeModalWidget().close()
+        dialog = QtWidgets.QApplication.activeModalWidget()
+        with qtbot.waitSignal(dialog.finished):
+            dialog.reject()
+            qtbot.wait(250)
         node.setSelected(False)
 
 
@@ -716,7 +717,10 @@ def test_action_open_description_dialog(session, qtbot):
                     pytest.fail('Timeout exceeded waiting for dialog to activate')
                 qtbot.wait(250)
                 attempts += 1
-            QtWidgets.QApplication.activeModalWidget().close()
+            dialog = QtWidgets.QApplication.activeModalWidget()
+            with qtbot.waitSignal(dialog.finished):
+                dialog.reject()
+                qtbot.wait(250)
             node.setSelected(False)
 
 
