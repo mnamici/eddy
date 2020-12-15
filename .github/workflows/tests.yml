@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7]
-        pyqt-version: [513, 514, 515]
+        python-version: [3.6, 3.7, 3.8]
+        pyqt-version: [513, 514]
 
     steps:
       - name: Checkout code
