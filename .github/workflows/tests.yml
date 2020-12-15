@@ -22,6 +22,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Required to run tests in headless mode
+          sudo apt-get install xvfb
           # Install openjdk 11 from ubuntu repos
           sudo apt-get install openjdk-11-jdk
           # Install python dependencies
