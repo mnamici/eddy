@@ -669,6 +669,7 @@ def test_action_select_all(session):
 #   PROPERTIES DIALOG
 #################################
 
+@pytest.mark.skip()
 def test_action_open_properties_dialog(session, qtbot: QtBot):
     # GIVEN
     project = session.project
@@ -698,6 +699,7 @@ def test_action_open_properties_dialog(session, qtbot: QtBot):
 #   IRI PROPS DIALOG
 #################################
 
+@pytest.mark.skip()
 def test_action_open_description_dialog(session, qtbot):
     # GIVEN
     project = session.project
@@ -722,7 +724,3 @@ def test_action_open_description_dialog(session, qtbot):
                 dialog.reject()
                 qtbot.wait(250)
             node.setSelected(False)
-
-
-
-
