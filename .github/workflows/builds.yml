@@ -46,17 +46,17 @@ jobs:
           python setup.py createdmg
 
       - run: |
-          echo "::set-env name=EDDY_VERSION::$(python -c 'import eddy; print(eddy.VERSION)')"
-          echo "::set-env name=EDDY_PLATFORM::$(python -c 'import platform; print(platform.system().lower())')"
-          echo "::set-env name=EDDY_ARCH::$(python -c 'import platform; print(platform.machine().lower())')"
+          echo EDDY_VERSION="$(python -c 'import eddy; print(eddy.VERSION)')" >> $GITHUB_ENV
+          echo EDDY_PLATFORM="$(python -c 'import platform; print(platform.system().lower())')" >> $GITHUB_ENV
+          echo EDDY_ARCH="$(python -c 'import platform; print(platform.machine().lower())')" >> $GITHUB_ENV
 
       - if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
-          echo "::set-env name=EDDY_ARTIFACT_EXT::tar.gz"
+          echo EDDY_ARTIFACT_EXT=tar.gz >> $GITHUB_ENV
 
       - if: ${{ startsWith(matrix.os, 'macos') }}
         run: |
-          echo "::set-env name=EDDY_ARTIFACT_EXT::dmg"
+          echo EDDY_ARTIFACT_EXT=dmg >> $GITHUB_ENV
 
       - name: Upload artifact (GitHub)
         uses: actions/upload-artifact@v2
@@ -75,3 +75,4 @@ jobs:
           package: Eddy
           version: ${{ env.EDDY_VERSION }}
           publish: 1
+          calculate_metadata: false
