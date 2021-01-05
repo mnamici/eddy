@@ -12,11 +12,9 @@ jobs:
         include:
           - os: ubuntu-18.04
             python-version: 3.8
-            pyqt-version: 5.15
 
           - os: macos-10.15
             python-version: 3.8
-            pyqt-version: 5.15
 
     steps:
       - name: Checkout code
@@ -47,9 +45,33 @@ jobs:
         run: |
           python setup.py createdmg
 
-      - name: Upload artifact
+      - run: |
+          echo "::set-env name=EDDY_VERSION::$(python -c 'import eddy; print(eddy.VERSION)')"
+          echo "::set-env name=EDDY_PLATFORM::$(python -c 'import platform; print(platform.system().lower())')"
+          echo "::set-env name=EDDY_ARCH::$(python -c 'import platform; print(platform.machine().lower())')"
+
+      - if: ${{ startsWith(matrix.os, 'ubuntu') }}
+        run: |
+          echo "::set-env name=EDDY_ARTIFACT_EXT::tar.gz"
+
+      - if: ${{ startsWith(matrix.os, 'macos') }}
+        run: |
+          echo "::set-env name=EDDY_ARTIFACT_EXT::dmg"
+
+      - name: Upload artifact (GitHub)
         uses: actions/upload-artifact@v2
         with:
           name: Eddy-${{ runner.os }}
           path: dist/*
 
+      - name: Upload artifact (Bintray)
+        uses: obdasystems/github-action-upload-bintray@master
+        with:
+          file: ./dist/Eddy-${{ env.EDDY_VERSION }}-${{ env.EDDY_PLATFORM }}_${{ env.EDDY_ARCH }}.${{ env.EDDY_ARTIFACT_EXT }}
+          api_user: ${{ secrets.BINTRAY_API_USER }}
+          api_key: ${{ secrets.BINTRAY_API_KEY }}
+          repository_user: ${{ secrets.BINTRAY_REPO_USER }}
+          repository: ${{ secrets.BINTRAY_REPO}}
+          package: Eddy
+          version: ${{ env.EDDY_VERSION }}
+          publish: 1
