@@ -75,4 +75,5 @@ jobs:
           package: Eddy
           version: ${{ env.EDDY_VERSION }}
           publish: 1
+          override: 1
           calculate_metadata: false
