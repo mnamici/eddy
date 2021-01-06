@@ -45,35 +45,25 @@ jobs:
         run: |
           python setup.py createdmg
 
-      - run: |
-          echo EDDY_VERSION="$(python -c 'import eddy; print(eddy.VERSION)')" >> $GITHUB_ENV
-          echo EDDY_PLATFORM="$(python -c 'import platform; print(platform.system().lower())')" >> $GITHUB_ENV
-          echo EDDY_ARCH="$(python -c 'import platform; print(platform.machine().lower())')" >> $GITHUB_ENV
-
-      - if: ${{ startsWith(matrix.os, 'ubuntu') }}
-        run: |
-          echo EDDY_ARTIFACT_EXT=tar.gz >> $GITHUB_ENV
-
-      - if: ${{ startsWith(matrix.os, 'macos') }}
-        run: |
-          echo EDDY_ARTIFACT_EXT=dmg >> $GITHUB_ENV
-
       - name: Upload artifact (GitHub)
         uses: actions/upload-artifact@v2
         with:
           name: Eddy-${{ runner.os }}
           path: dist/*
 
+      - run: |
+          echo EDDY_VERSION="$(python -c 'import eddy; print(eddy.VERSION)')" >> $GITHUB_ENV
+
       - name: Upload artifact (Bintray)
-        uses: obdasystems/github-action-upload-bintray@master
-        with:
-          file: ./dist/Eddy-${{ env.EDDY_VERSION }}-${{ env.EDDY_PLATFORM }}_${{ env.EDDY_ARCH }}.${{ env.EDDY_ARTIFACT_EXT }}
-          api_user: ${{ secrets.BINTRAY_API_USER }}
-          api_key: ${{ secrets.BINTRAY_API_KEY }}
-          repository_user: ${{ secrets.BINTRAY_REPO_USER }}
-          repository: ${{ secrets.BINTRAY_REPO}}
-          package: Eddy
-          version: ${{ env.EDDY_VERSION }}
-          publish: 1
-          override: 1
-          calculate_metadata: false
+        run: |
+          python -m pip install bintray-python==0.8.0
+          ./scripts/bintray_upload.py \
+            --username ${{ secrets.BINTRAY_API_USER }} \
+            --api-key ${{ secrets.BINTRAY_API_KEY }} \
+            --subject ${{ secrets.BINTRAY_REPO_USER }} \
+            --repo ${{ secrets.BINTRAY_REPO}} \
+            --package Eddy \
+            --version ${{ env.EDDY_VERSION }} \
+            --publish \
+            --override \
+            dist/*
